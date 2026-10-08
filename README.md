@@ -91,3 +91,22 @@ Verification after the update: production build passed; mobile browser flow comp
 - Keyboard focus styles, a skip-to-content link, labelled navigation, and larger controls are included. This is responsive layout verification, not a formal WCAG conformance audit.
 
 Browser checks covered 320, 390, 768, 1024, and 1440 px. Home, booking, populated tracking, and admin screens had no horizontal overflow or clipped navigation labels. Calendar and review layouts were also checked. At 320 px, the final request button was visibly above the bottom navigation. A booking created at mobile width was confirmed and completed using the desktop admin view, then reviewed at mobile width.
+
+
+## Latest responsive website revision
+See MVP-SCOPE.md for the implemented routes and reference decisions. Navigation supports URL hashes, reload and browser history. Confirmed/completed slots are reserved in MongoDB and schedule availability is checked before review. Navigation, home, service detail and API helpers are separate modules.
+
+The current revised preview runs on http://127.0.0.1:5175 (the earlier preview remains on 5173). To use this preview port yourself in PowerShell:
+
+```powershell
+$env:PORT='5175'
+npm run demo
+```
+
+Administrator key in demo mode: sweep-dreams-class-demo. Temporary demo records reset when the server stops. Persistent MongoDB configuration remains documented above.
+
+
+## Customer account update
+Sign up: #signup. Log in: #login. Customer accounts use email/password; passwords are salted and hashed with Node scrypt. Sessions use a seven-day HttpOnly SameSite cookie and hashed server-side session records. Logout revokes the current session. New bookings made while logged in belong to that account and appear under My booking on other devices after login. Existing guest bookings remain accessible by private reference/token and are not automatically claimed by email.
+
+Authentication validation, wrong password, duplicate email, session logout, account history and cross-account isolation are covered by the integration test. The browser sign-up/login/logout/reload flows passed. Email verification, password recovery and social sign-in are not included. Demo accounts and bookings reset when the server stops; persistent MongoDB keeps them across restarts. Use fictional details for classroom demonstrations.

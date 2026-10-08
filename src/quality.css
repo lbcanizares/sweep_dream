@@ -1,0 +1,16 @@
+/* Shared final accessibility and responsive refinements. */
+.nav{text-decoration:none;display:flex;align-items:center;justify-content:center}
+.skip-link{top:-100px;transform:none}.skip-link:focus{top:8px}
+:root{--muted:#635270}p.muted,.fine,.lead,.demo{color:var(--muted)}
+.availability-note{grid-column:1 / -1;padding:12px 14px;border-radius:10px;background:#f0eaff;color:#604682;font-size:12px;line-height:1.6}
+.loading-state{padding:60px 20px;text-align:center}.loading-state h1{font-size:30px}
+.categories button{min-height:44px}.service-card:not(:disabled):hover{border-color:#a38aff;box-shadow:0 8px 24px #4b2de912}
+.screen-home .service-list{grid-template-columns:1fr}.screen-home .service-card{min-height:130px;flex-wrap:nowrap;align-items:center}.screen-home .service-copy{flex:1;width:auto}.screen-home .chevron{position:static}
+input,select,textarea{max-width:100%}.booking-heading{gap:14px;flex-wrap:wrap}.lookup{min-width:0}.lookup label{min-width:0}
+@media(min-width:768px){.screen-home .service-card{padding:28px}.screen-home .service-icon{width:80px;height:80px}.screen-home .service-copy strong{font-size:22px}.screen-home .home-note{background:#f0eaff}}
+@media(max-width:767px){.screen-home .service-card{padding:20px 15px}.nav{min-height:54px}.screen-home .service-copy strong{font-size:15px}.screen-home .chevron{font-size:24px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+.account-nav{display:flex;align-items:center;gap:15px;font-size:13px}.account-nav a{white-space:nowrap;text-decoration:none}.account-nav .primary{padding:12px 16px}.account-nav span{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.auth-layout{display:grid;grid-template-columns:1fr 1fr;gap:70px;max-width:980px;margin:40px auto;align-items:center}.auth-intro h1{font-size:42px;color:#392659}.auth-intro p{color:#746384}.auth-card{padding:32px}.auth-card h1{font-size:29px;letter-spacing:-.8px;color:#4b2de9}.auth-switch{text-align:center;font-size:13px;margin:25px 0}.auth-switch a{color:#4b2de9;font-weight:700}.account-bookings{margin:20px 0}.account-booking{display:flex;width:100%;flex-direction:column;text-align:left;gap:8px;margin:10px 0}.account-booking span{font-size:12px;overflow-wrap:anywhere}
+@media(min-width:768px){header{flex-wrap:wrap;gap:15px}.account-nav{margin-left:auto}}
+@media(max-width:767px){header{padding:12px 20px;background:white;border-bottom:1px solid #eee}.account-nav{justify-content:flex-end}.account-nav span{margin-right:auto}.auth-layout{display:block;margin:25px auto;max-width:450px}.auth-intro{display:none}.auth-card{padding:24px}.auth-card h1{font-size:27px;text-align:center}.auth-card>.muted{text-align:center}}
