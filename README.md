@@ -110,3 +110,7 @@ Administrator key in demo mode: sweep-dreams-class-demo. Temporary demo records 
 Sign up: #signup. Log in: #login. Customer accounts use email/password; passwords are salted and hashed with Node scrypt. Sessions use a seven-day HttpOnly SameSite cookie and hashed server-side session records. Logout revokes the current session. New bookings made while logged in belong to that account and appear under My booking on other devices after login. Existing guest bookings remain accessible by private reference/token and are not automatically claimed by email.
 
 Authentication validation, wrong password, duplicate email, session logout, account history and cross-account isolation are covered by the integration test. The browser sign-up/login/logout/reload flows passed. Email verification, password recovery and social sign-in are not included. Demo accounts and bookings reset when the server stops; persistent MongoDB keeps them across restarts. Use fictional details for classroom demonstrations.
+
+
+## Separate login portals
+Customer login: #login. Administrator login: #admin-login. Customer/guest navigation has no Admin item. Staff login uses the administrator key and has its own booking-desk navigation. Direct #admin access redirects to staff login until a valid key is supplied. Returning to customer views clears the in-memory staff key; browser refresh requires staff login again. Customer cookies alone do not authorize administrator endpoints.
