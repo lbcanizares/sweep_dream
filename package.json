@@ -1,7 +1,22 @@
 {
-  "name": "sweep-dreams-mvp", "version": "1.0.0", "private": true, "type": "module",
-  "scripts": {"dev": "node server/index.js", "demo": "node server/index.js --demo", "build": "vite build", "test": "node --test tests/api.test.js"},
-  "dependencies": {"express": "^5.1.0", "mongodb": "^6.20.0", "react": "^19.1.1", "react-dom": "^19.1.1"},
-  "devDependencies": {"vite": "^7.1.7", "mongodb-memory-server": "^10.2.1"},
-  "engines": {"node": ">=20.19"}
+  "name": "sweep-dreams-mvp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": ["frontend"],
+  "scripts": {
+    "dev": "node backend/index.js",
+    "demo": "node backend/index.js --demo",
+    "start": "node backend/index.js",
+    "build": "npm run build --workspace frontend",
+    "test": "node --test tests/api.test.js tests/vercel.test.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "mongodb": "^6.20.0"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^10.2.1"
+  },
+  "engines": { "node": ">=20.19" }
 }

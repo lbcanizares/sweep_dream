@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {MongoMemoryServer} from 'mongodb-memory-server';
 import {MongoClient} from 'mongodb';
-import {createApp,checklist} from '../server/app.js';
+import {createApp,checklist} from '../backend/app.js';
 
 test('MERN booking lifecycle, ownership, validation, and slot conflicts',async()=>{
   const mongo=await MongoMemoryServer.create();

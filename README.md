@@ -28,7 +28,7 @@ npm run build
 npm run dev
 ```
 
-Your MongoDB service must be running. Keep `.env` private. `npm run dev` serves the built app when `dist` exists, otherwise it runs Vite middleware. Delete `dist` if developing source changes, or rebuild it.
+Your MongoDB service must be running. Keep `.env` private. `npm run dev` serves the built app when `frontend/dist` exists, otherwise it runs Vite middleware. Delete `frontend/dist` if developing source changes, or rebuild it.
 
 ## Demonstrate in 3-5 minutes
 
