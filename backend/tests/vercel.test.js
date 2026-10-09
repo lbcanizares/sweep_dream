@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {MongoMemoryServer} from 'mongodb-memory-server';
-import handler,{closeConnections} from '../api/handler.js';
+import handler,{closeConnections} from '../../api/handler.js';
 test('Vercel API rewrite and database-backed authentication',async()=>{
  const mongo=await MongoMemoryServer.create();process.env.MONGO_URI=mongo.getUri();process.env.ADMIN_KEY='deployment-test-key';process.env.DB_NAME='deployment_test';
  const server=createServer(handler);await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));

@@ -1,5 +1,5 @@
 import {MongoClient} from 'mongodb';
-import {createApp} from '../server/app.js';
+import {createApp} from '../backend/server/app.js';
 let initialization;
 let databaseClient;
 async function initialize() {
