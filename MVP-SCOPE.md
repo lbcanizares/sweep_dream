@@ -6,17 +6,19 @@ The project PDF identifies a busy student athlete, transparent basic cleaning ra
 The business canvas supports booking, manual cleaner matching, customer contact and service fees. Exact pilot sizes/rates remain assumptions. Steve Blank's MVP Tree article supports selecting one customer group, one job and one delivery platform. This implementation serves busy dorm residents through a responsive web platform.
 
 ## Implemented routes
-- #start: optional welcome screen
-- #home: search and service discovery
+- #home: public landing page with the service list (signed-in customers are sent to #dashboard; #start is an alias)
+- #dashboard: signed-in customers only; greeting, service search and filters, promo card and the customer's bookings
 - #detail: basic cleaning, inclusions and rates
-- #book: room size, calendar/time availability, details and cash payment review
-- #track: request receipt, confirmed assignment, saved status, cancellation and feedback
+- #book: room size, calendar/time availability, details and cash payment review (guests and customers)
+- #bookings: request receipt, confirmed assignment, saved status, cancellation and feedback; account history when signed in (#track is an alias)
 - #admin: protected desk, assignment and mandatory completion checklist
+
+Signed-in customers see these screens inside an app shell (fixed top bar with account menu, left sidebar on tablet/desktop, slide-in drawer on phones). Guests see #home, #detail, #book and #bookings in the public layout and can still book with a private token.
 
 Confirmation and feedback are states within My booking. Cash is paid manually after service; no electronic charge is simulated. No login is necessary: customers use a private booking token. Account/social login, live location, chat, tips, add-ons and payment gateways are deferred. Cleaner screening and visits are manual operations, never claimed to have been performed by the software.
 
 ## Quality checks
-Production build and real MongoDB API lifecycle tests. Browser demonstration: booking, assignment, checklist completion, feedback and reload. Desktop top navigation and mobile bottom navigation use actual shareable hash routes. Data in demo MongoDB lasts until the server stops; configure .env with persistent MongoDB for saved data between restarts.
+Production build and real MongoDB API lifecycle tests. Browser demonstration: booking, assignment, checklist completion, feedback and reload. Navigation uses actual shareable hash routes. Data in demo MongoDB lasts until the server stops; configure .env with persistent MongoDB for saved data between restarts.
 
 ## Guide links
 https://medium.com/@sgblank/a-path-to-the-minimum-viable-product-d54d5a500baf

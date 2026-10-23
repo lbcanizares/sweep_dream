@@ -3,3 +3,10 @@ dist/
 .env
 data/
 .vercel/
+
+# Local AI tooling and notes (not published)
+.agents/
+.claude/
+CLAUDE.md
+CHANGES-APP-SHELL.md
+skills-lock.json

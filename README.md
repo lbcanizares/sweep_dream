@@ -114,3 +114,7 @@ Authentication validation, wrong password, duplicate email, session logout, acco
 
 ## Separate login portals
 Customer login: #login. Administrator login: #admin-login. Customer/guest navigation has no Admin item. Staff login uses the administrator key and has its own booking-desk navigation. Direct #admin access redirects to staff login until a valid key is supplied. Returning to customer views clears the in-memory staff key; browser refresh requires staff login again. Customer cookies alone do not authorize administrator endpoints.
+
+
+## App shell and dashboard revision
+Signed-in customers now land on `#dashboard` inside an app shell: a fixed top bar (logo left, account avatar menu right), a fixed 250 px left sidebar (Home, Book a clean, My bookings) on tablet and desktop, and a hamburger-triggered slide-in drawer on phones (80% width, `#F5F7FD`, dark backdrop that closes it). Guests keep a public layout and can still book and look up bookings by private token. The dashboard has a greeting, service search, a navy promo card, All/Dorm/Home filter pills with a sliding active state, service cards, and a "Your bookings" panel. Loading uses skeleton placeholders inside the shell, a slim top progress bar on route changes, and spinners inside the button that was pressed. Everything is navy (`#0B2763`) on `#F5F7FD`, styled from one `frontend/src/styles.css`.
