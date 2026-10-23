@@ -41,7 +41,7 @@ export function ProtectedLayout({tab,go,user,logout,loggingOut,children}){
 
 export function PublicLayout({go,children}){
  return <div className="shell shell-public">
-  <header className="topbar"><Brand go={go} to="home"/><nav className="public-nav" aria-label="Main navigation"><a className="text-link hide-sm" href="#bookings" onClick={link(go,'bookings')}>Find a booking</a><a className="text-link" href="#login" onClick={link(go,'login')}>Log in</a><a className="primary small" href="#signup" onClick={link(go,'signup')}>Sign up</a></nav></header>
+  <header className="topbar"><Brand go={go} to="home"/><nav className="public-nav" aria-label="Main navigation"><a className="text-link" href="#login" onClick={link(go,'login')}>Log in</a><a className="primary small" href="#signup" onClick={link(go,'signup')}>Sign up</a></nav></header>
   <main id="main-content" className="content" tabIndex={-1}>{children}</main>
   <footer className="site-foot"><span>Sweep Dreams · We clean. You relax.</span><span>Classroom MVP · one service, one campus pilot</span></footer>
  </div>;

@@ -1,5 +1,9 @@
 import React,{useEffect,useState} from 'react';
-export const pesosFrom=config=>config?.prices?Math.min(...Object.values(config.prices)):300;
+export const servicePrice=(config,s)=>s.sized?config.prices.small:s.price;
+export const pesosFrom=config=>config?.services?Math.min(...config.services.map(s=>servicePrice(config,s))):300;
+// Mirrors the server's calculation for display only; the server recalculates the price it saves.
+export const bookingTotal=(config,form)=>{const s=config.services.find(x=>x.id===form.serviceId);return s?(s.sized?config.prices[form.size]:s.price)+form.addons.reduce((n,id)=>n+(config.addons.find(a=>a.id===id)?.price||0),0):0};
+export const paymentName=(config,id)=>config?.paymentMethods.find(p=>p.id===id)?.name||'Cash on service';
 export const fmtDate=d=>new Date(d+'T12:00:00').toLocaleDateString('en-PH',{weekday:'short',day:'numeric',month:'short'});
 export const initials=name=>(name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
 export const statusLabel={pending:'Pending confirmation',confirmed:'Confirmed',completed:'Completed',cancelled:'Cancelled'};

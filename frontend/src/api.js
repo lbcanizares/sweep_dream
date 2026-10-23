@@ -6,4 +6,3 @@ export async function api(path, options={}) {
   if (!response.ok) throw Error(data.error || 'Request failed.');
   return data;
 }
-export function remember(access) { try { localStorage.setItem('sweep-access', JSON.stringify(access)); } catch {} }

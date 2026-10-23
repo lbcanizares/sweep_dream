@@ -1,22 +1,14 @@
 {
-  "name": "sweep-dreams-mvp",
+  "name": "sweep-dreams",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "workspaces": ["frontend"],
+  "workspaces": ["frontend", "backend"],
   "scripts": {
-    "dev": "node backend/index.js",
-    "demo": "node backend/index.js --demo",
-    "start": "node backend/index.js",
-    "build": "npm run build --workspace frontend",
-    "test": "node --test tests/api.test.js tests/vercel.test.js"
-  },
-  "dependencies": {
-    "express": "^5.1.0",
-    "mongodb": "^6.20.0"
-  },
-  "devDependencies": {
-    "mongodb-memory-server": "^10.2.1"
+    "dev": "npm run dev -w backend",
+    "demo": "npm run demo -w backend",
+    "build": "npm run build -w frontend",
+    "test": "npm test -w backend"
   },
   "engines": { "node": ">=20.19" }
 }

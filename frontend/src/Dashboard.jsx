@@ -9,7 +9,7 @@ const upcoming=(rows,today)=>rows.filter(b=>['pending','confirmed'].includes(b.s
 function BookingsPanel({bookings,config,go,open}){
  const next=upcoming(bookings,config.today),rest=bookings.filter(b=>b!==next).slice(0,next?3:4);
  return <section className="panel bookings-panel" aria-labelledby="your-bookings"><div className="panel-head"><h2 id="your-bookings">Your bookings</h2>{bookings.length>0&&<a className="text-link" href="#bookings" onClick={e=>{e.preventDefault();go('bookings')}}>View all {bookings.length}</a>}</div>
-  {!bookings.length?<div className="panel-empty"><p><strong>No bookings yet.</strong> A basic dorm clean starts at {pesos(pesosFrom(config))}, paid in cash after the visit.</p><button className="secondary small" onClick={()=>go('book')}>Book a clean</button></div>:<>
+  {!bookings.length?<div className="panel-empty"><p><strong>No bookings yet.</strong> Cleans start at {pesos(pesosFrom(config))}.</p><button className="secondary small" onClick={()=>go('book')}>Book a clean</button></div>:<>
    {next&&<button className="next-clean" onClick={()=>open(next)}><small>Next clean</small><strong>{fmtDate(next.date)} · {next.time}</strong><span>{next.room}</span><StatusPill status={next.status}/></button>}
    <ul className="booking-rows">{rest.map(b=><li key={b.id}><button onClick={()=>open(b)}><span><strong>{fmtDate(b.date)} · {b.time}</strong><small>#{b.id} · {pesos(b.price)}</small></span><StatusPill status={b.status}/></button></li>)}</ul>
   </>}
@@ -23,9 +23,9 @@ export function DashboardSkeleton(){
  </div>;
 }
 
-export default function Dashboard({user,config,bookings,go,search,setSearch,open}){
+export default function Dashboard({user,config,bookings,go,choose,search,setSearch,open}){
  return <div className="dashboard">
-  <div className="dash-main"><div className="dash-head"><h1>Welcome back, {user.name.split(' ')[0]}</h1><p>What needs a sweep today?</p><label className="search"><NavIcon name="search" size={20}/><span className="sr-only">Search cleaning services</span><input type="search" placeholder="Search services" value={search} onChange={e=>setSearch(e.target.value)}/></label></div><ServiceCatalog config={config} go={go} search={search} setSearch={setSearch}/></div>
+  <div className="dash-main"><div className="dash-head"><h1>Welcome back, {user.name.split(' ')[0]}</h1><p>What needs a sweep today?</p><label className="search"><NavIcon name="search" size={20}/><span className="sr-only">Search cleaning services</span><input type="search" placeholder="Search services" value={search} onChange={e=>setSearch(e.target.value)}/></label></div><ServiceCatalog config={config} choose={choose} search={search} setSearch={setSearch}/></div>
   <div className="dash-aside"><PromoBanner config={config} go={go}/><BookingsPanel bookings={bookings} config={config} go={go} open={open}/></div>
  </div>;
 }
