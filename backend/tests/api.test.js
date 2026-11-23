@@ -126,6 +126,20 @@ test('MERN booking lifecycle, login requirement, ownership, validation, and slot
     const done=await request('/bookings/'+id,'GET',undefined,me);
     assert.equal(done.data.status,'completed');assert.deepEqual(done.data.statusHistory.map(h=>h.by+':'+h.status),['customer:pending','admin:confirmed','cleaner:on_the_way','cleaner:in_progress','cleaner:completed']);
 
+    // The admin can edit a cleaner's details; customers see the updated name.
+    assert.equal((await request('/admin/cleaners/'+ana.data.id,'PATCH',{email:'cara@example.test'},admin)).status,409);
+    assert.equal((await request('/admin/cleaners/'+ana.data.id,'PATCH',{photoUrl:'ftp://example.test/a.jpg'},admin)).status,400);
+    assert.equal((await request('/admin/cleaners/'+ana.data.id,'PATCH',{name:'Ana'},me)).status,401);
+    const edited=await request('/admin/cleaners/'+ana.data.id,'PATCH',{name:'Ana Reyes',phone:'0917 111 2222',email:'ana.reyes@example.test',serviceTypes:['Dorm','Home']},admin);
+    assert.equal(edited.status,200);assert.equal(edited.data.email,'ana.reyes@example.test');assert.equal(edited.data.phone,'0917 111 2222');assert.deepEqual(edited.data.serviceTypes,['Dorm','Home']);
+    assert.equal((await request('/bookings/'+id,'GET',undefined,me)).data.cleaner,'Ana Reyes');
+
+    // A new password signs the cleaner out; they log back in with the new email and password.
+    assert.equal((await request('/admin/cleaners/'+ana.data.id,'PATCH',{password:'NewCleanerPass123!'},admin)).status,200);
+    assert.equal((await request('/cleaner/jobs','GET',undefined,anaCookie)).status,401);
+    assert.equal((await request('/auth/login','POST',{email:'ana@example.test',password:'CleanerPass123!'})).status,401);
+    assert.equal((await request('/auth/login','POST',{email:'ana.reyes@example.test',password:'NewCleanerPass123!'})).status,200);
+
     // A deactivated cleaner loses access to the portal.
     assert.equal((await request('/admin/cleaners/'+otherCleaner.data.id,'PATCH',{active:false},admin)).status,200);
     assert.equal((await request('/cleaner/jobs','GET',undefined,caraCookie)).status,403);

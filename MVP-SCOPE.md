@@ -11,7 +11,7 @@ The business canvas supports booking, manual cleaner matching, customer contact 
 - #dashboard: login required; greeting, service search and Dorm/Home filters, promo card and the customer's bookings
 - #book: login required; service, room size (basic dorm cleaning), add-ons, calendar/time availability, details and payment method
 - #bookings: login required; the account's bookings split into Upcoming (pending/confirmed, soonest first) and History (completed/cancelled, newest first), with receipt, confirmed assignment, status, cancellation and feedback (#track is an alias)
-- #admin: protected desk with two tabs: Bookings (assign a screened cleaner from a dropdown, override: finish or cancel any job) and Cleaners (create cleaner accounts, record ID/background screening, activate/deactivate)
+- #admin and #admin-cleaners: protected desk in the same sidebar shell customers use (drawer on phones). Bookings: assign a screened cleaner from a dropdown, override: finish or cancel any job. Cleaners: create cleaner accounts, edit their details (name, email, phone, photo link, bio, service types, screening, optional new password that signs them out), and deactivate/reactivate
 - #cleaner: login required, cleaner accounts only; the cleaner's assigned jobs with address, customer contact and payment to collect. The cleaner moves each job one step at a time (on the way, cleaning, completed) and must tick the full checklist to finish. Customers see each step on their My bookings timeline
 
 Signed-in customers see these screens inside an app shell (fixed top bar with account menu, left sidebar on tablet/desktop, slide-in drawer on phones). Guests who open #book, #bookings or #dashboard are sent to #login and returned to that page afterwards.

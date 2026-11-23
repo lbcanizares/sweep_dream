@@ -317,7 +317,6 @@ code{display:block;margin-top:8px;padding:12px;border-radius:10px;background:var
 .auth-switch{text-align:center;font-size:14px;margin:20px 0 0}
 .admin-login{max-width:460px;margin:24px auto}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:0;margin-bottom:16px}
-.admin-tabs{margin-bottom:16px;background:var(--surface);border:1px solid var(--border)}
 .admin-cleaners{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
 .admin-cleaners h2{font-size:20px}
 .cleaner-list{list-style:none;margin:12px 0 0;padding:0}
@@ -325,7 +324,10 @@ code{display:block;margin-top:8px;padding:12px;border-radius:10px;background:var
 .cleaner-who{display:flex;align-items:center;gap:12px;min-width:0}.cleaner-who>div{min-width:0}
 .cleaner-who small{display:block;color:var(--muted);font-size:13px}
 .cleaner-actions{display:flex;flex-wrap:wrap;gap:8px}
-.secondary.is-on{background:var(--pos-bg);border-color:var(--pos-bg);color:var(--pos-ink)}
+.cleaner-row.editing{margin:0 -12px;padding:14px 12px;border-radius:12px;background:var(--navy-wash)}
+.cleaner-actions{align-items:center;gap:16px}
+.cleaner-form.is-editing{border-color:var(--navy);box-shadow:0 0 0 1px var(--navy)}
+.cleaner-form{scroll-margin-top:calc(var(--top) + 16px)}
 .field-grid .wide,.summary .wide{grid-column:1 / -1}
 label .fine{display:block;margin-top:6px;font-weight:400}
 
