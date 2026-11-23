@@ -10,12 +10,12 @@ The business canvas supports booking, manual cleaner matching, customer contact 
 - #detail: the chosen service's inclusions, price and add-ons (public)
 - #dashboard: login required; greeting, service search and Dorm/Home filters, promo card and the customer's bookings
 - #book: login required; service, room size (basic dorm cleaning), add-ons, calendar/time availability, details and payment method
-- #bookings: login required; the account's bookings with receipt, confirmed assignment, status, cancellation and feedback (#track is an alias)
+- #bookings: login required; the account's bookings split into Upcoming (pending/confirmed, soonest first) and History (completed/cancelled, newest first), with receipt, confirmed assignment, status, cancellation and feedback (#track is an alias)
 - #admin: protected desk, assignment and mandatory completion checklist
 
 Signed-in customers see these screens inside an app shell (fixed top bar with account menu, left sidebar on tablet/desktop, slide-in drawer on phones). Guests who open #book, #bookings or #dashboard are sent to #login and returned to that page afterwards.
 
-Four services are bookable (basic dorm cleaning from PHP300 by room size; dorm deep clean, regular home cleaning and move-in/move-out at flat prices), with optional add-ons. The server calculates every price. Confirmation and feedback are states within My bookings. Customers choose cash on service, GCash or card, but no payment is processed: the team arranges GCash/card payment manually and no electronic charge is simulated. Booking requires an account; guest private-token access was removed. Social login, live location, chat, tips and payment gateways are deferred. Cleaner screening and visits are manual operations, never claimed to have been performed by the software.
+Four services are bookable (basic dorm cleaning from PHP300 by room size; dorm deep clean, regular home cleaning and move-in/move-out at flat prices), with optional add-ons. The server calculates every price. Confirmation and feedback are states within My bookings. Customers choose cash on service or GCash; card is shown as "Coming soon" and cannot be selected (the server also rejects it). No payment is processed: the team arranges GCash payment manually and no electronic charge is simulated. Booking requires an account; guest private-token access was removed. Social login, live location, chat, tips and payment gateways are deferred. Cleaner screening and visits are manual operations, never claimed to have been performed by the software.
 
 ## Quality checks
 Production build and real MongoDB API lifecycle tests. Browser demonstration: booking, assignment, checklist completion, feedback and reload. Navigation uses actual shareable hash routes. Data in demo MongoDB lasts until the server stops; configure .env with persistent MongoDB for saved data between restarts.

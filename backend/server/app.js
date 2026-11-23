@@ -6,11 +6,12 @@ export const checklist = ['Sweep and mop accessible floors', 'Wipe desks and acc
 const prices = {small: 300, standard: 450};
 const addons = {laundry:{name:'Laundry fold',price:80}, dishes:{name:'Dishes',price:50}, fridge:{name:'Fridge clean',price:200}};
 const payments = [
-  {id:'cash',name:'Cash on service',note:'Pay after your cleaning visit'},
-  {id:'gcash',name:'GCash',note:'Our team sends payment details after confirming'},
-  {id:'card',name:'Card',note:'Our team arranges card payment after confirming'}
+  {id:'cash',name:'Cash on service',note:'Pay after your cleaning visit',available:true},
+  {id:'gcash',name:'GCash',note:'Our team sends payment details after confirming',available:true},
+  {id:'card',name:'Card',note:'Card payments are not available yet',available:false}
 ];
-const paymentIds = payments.map(p=>p.id);
+// Only methods marked available can be chosen for a new booking.
+const paymentIds = payments.filter(p=>p.available).map(p=>p.id);
 const services = [
   {id:'basic',name:'Basic dorm cleaning',category:'Dorm',desc:'About 1 hour · One-time clean',hours:'about 1 hour',sized:true,included:null},
   {id:'dorm_deep',name:'Dorm deep clean',category:'Dorm',desc:'1-2 hrs · Single room',hours:'1-2 hours',price:499,included:['Dusting, sweeping, mopping','Bed making and linen change','Trash removal and disinfecting']},
