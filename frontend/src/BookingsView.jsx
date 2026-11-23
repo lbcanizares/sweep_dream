@@ -1,14 +1,17 @@
 import React,{useEffect,useState} from 'react';
 import {pesos} from './api.js';
+import {downloadIcs,googleCalendarUrl} from './calendar.js';
 import {ACTIVE_STATUSES,Button,Sk,Spinner,StatusPill,fmtDate,paymentName} from './ui.jsx';
 const titles={confirmed:'Booking confirmed',on_the_way:'Your cleaner is on the way',in_progress:'Cleaning in progress',completed:'Your room, refreshed',cancelled:'Booking cancelled',pending:'Request received'};
-const notes={pending:'Your request is saved. The team will contact you using your supplied details after checking the schedule.',confirmed:'Your cleaner and requested schedule have been confirmed by the pilot team.',on_the_way:'Your cleaner has set off. Please make sure they can get into your building.',in_progress:'Your cleaner has started. They will mark the job complete when the checklist is done.',completed:'Cleaning marked complete. Tell us how it went.',cancelled:'This booking is cancelled.'};
+const notes={pending:'Your request is saved. The team will contact you using your supplied details after checking the schedule.',confirmed:'Your cleaner and requested schedule have been confirmed by the pilot team.',on_the_way:'Your cleaner has set off. Please make sure they can get into your building.',in_progress:'Your cleaner has started. They will mark the job complete when the checklist is done.',completed:'Cleaning marked complete. Tell us how it went.',cancelled:'This booking is cancelled. If you added it to your calendar, remember to delete it there.'};
 // Pending and confirmed bookings are still active; completed and cancelled ones are history.
 const isUpcoming=b=>ACTIVE_STATUSES.includes(b.status);
 // Customer-facing progress steps; cleaners move the booking through the middle ones.
 const steps=[['pending','Request received'],['confirmed','Cleaner assigned'],['on_the_way','On the way'],['in_progress','Cleaning'],['completed','Completed']];
 const when=b=>b.date+' '+b.time;
 const tabs=[['upcoming','Upcoming'],['history','History']];
+// Link back to this site from calendar events.
+const site=()=>location.origin+location.pathname;
 const empty={upcoming:'No upcoming cleans. Book one and it will show up here.',history:'No past bookings yet. Completed and cancelled cleans will show up here.'};
 
 export default function BookingsView({config,accountBookings,booking,load,cancel,feedback,busyKey,go}){
@@ -36,6 +39,8 @@ export default function BookingsView({config,accountBookings,booking,load,cancel
   <ol className="booking-timeline" aria-label="Booking progress">{steps.map(([state,label],i)=>{const index=steps.findIndex(([s])=>s===booking.status);return <li key={state} className={index>=i?'reached':''}><span aria-hidden="true">{index>=i?'✓':''}</span><div><strong>{label}</strong>{state===booking.status&&<small>Current status</small>}</div></li>})}</ol>
   {booking.cleaner&&<div className="cleaner-card">{booking.cleanerPhotoUrl?<img className="avatar photo" src={booking.cleanerPhotoUrl} alt=""/>:<span className="avatar" aria-hidden="true">{booking.cleaner[0]}</span>}<div><strong>{booking.cleaner}</strong><small>Your assigned cleaner</small></div></div>}
   <p className="muted">{notes[booking.status]}</p>
+  {['pending','confirmed'].includes(booking.status)&&<div className="calendar-add"><div><strong>Get a reminder</strong><small>{booking.status==='pending'?'Save your requested time now. The team will confirm it.':'Save this clean to your calendar so it reminds you before the visit.'}</small></div>
+   <div className="calendar-buttons"><a className="secondary small" href={googleCalendarUrl(booking,config,site())} target="_blank" rel="noopener noreferrer">Add to Google Calendar</a><button type="button" className="secondary small" onClick={()=>downloadIcs(booking,config,site())}>Apple / Outlook (.ics)</button></div></div>}
   <div className="actions"><Button className="secondary" busy={busyKey==='refresh'} disabled={busy} onClick={()=>load(booking.id,'refresh')}>Refresh status</Button>{['pending','confirmed'].includes(booking.status)&&<Button className="secondary danger" busy={busyKey==='cancel'} disabled={busy} onClick={cancel}>Cancel booking</Button>}</div>
   {booking.status==='completed'&&(booking.feedback?<div className="callout">Thank you! Your {booking.feedback.rating}/5 feedback has been saved.</div>:<form className="feedback" onSubmit={e=>{e.preventDefault();feedback(rating,comment)}}><h3>How was your experience?</h3><div className="star-rating" role="group" aria-label="Choose a rating">{[1,2,3,4,5].map(n=><button type="button" key={n} aria-label={n+' star'+(n>1?'s':'')} aria-pressed={rating===n} onClick={()=>setRating(n)}>{n<=rating?'★':'☆'}</button>)}</div><label>Your feedback<textarea maxLength={500} value={comment} onChange={e=>setComment(e.target.value)}/></label><Button className="primary wide" busy={busyKey==='feedback'} disabled={busy}>Submit feedback</Button></form>)}
  </article>}

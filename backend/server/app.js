@@ -12,11 +12,12 @@ const payments = [
 ];
 // Only methods marked available can be chosen for a new booking.
 const paymentIds = payments.filter(p=>p.available).map(p=>p.id);
+// minutes: the longest a visit usually takes, used as the length of calendar reminders.
 const services = [
-  {id:'basic',name:'Basic dorm cleaning',category:'Dorm',desc:'About 1 hour · One-time clean',hours:'about 1 hour',sized:true,included:null},
-  {id:'dorm_deep',name:'Dorm deep clean',category:'Dorm',desc:'1-2 hrs · Single room',hours:'1-2 hours',price:499,included:['Dusting, sweeping, mopping','Bed making and linen change','Trash removal and disinfecting']},
-  {id:'home_regular',name:'Regular home cleaning',category:'Home',desc:'2-3 hrs · Homes and apartments',hours:'2-3 hours',price:699,included:['Dusting, sweeping, mopping','Kitchen and bathroom wipe-down','Trash removal']},
-  {id:'move',name:'Move-in / move-out',category:'Home',desc:'3-4 hrs · Deep sanitation',hours:'3-4 hours',price:1299,included:['Deep sanitation of all rooms','Kitchen and bathroom scrub','Floor mopping and trash removal']}
+  {id:'basic',minutes:60,name:'Basic dorm cleaning',category:'Dorm',desc:'About 1 hour · One-time clean',hours:'about 1 hour',sized:true,included:null},
+  {id:'dorm_deep',minutes:120,name:'Dorm deep clean',category:'Dorm',desc:'1-2 hrs · Single room',hours:'1-2 hours',price:499,included:['Dusting, sweeping, mopping','Bed making and linen change','Trash removal and disinfecting']},
+  {id:'home_regular',minutes:180,name:'Regular home cleaning',category:'Home',desc:'2-3 hrs · Homes and apartments',hours:'2-3 hours',price:699,included:['Dusting, sweeping, mopping','Kitchen and bathroom wipe-down','Trash removal']},
+  {id:'move',minutes:240,name:'Move-in / move-out',category:'Home',desc:'3-4 hrs · Deep sanitation',hours:'3-4 hours',price:1299,included:['Deep sanitation of all rooms','Kitchen and bathroom scrub','Floor mopping and trash removal']}
 ];
 const slots = ['09:00', '11:00', '13:00', '15:00'];
 // Statuses that hold a time slot: once a cleaner is assigned until the job is done.
