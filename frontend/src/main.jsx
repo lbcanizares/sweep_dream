@@ -17,8 +17,9 @@ import CleanerView from './CleanerView.jsx';
 // Hash routes. Public: home, detail, login, signup. Login required (ProtectedLayout): dashboard, book, bookings, cleaner;
 // guests are sent to #login and returned afterwards. Signed-in users see detail inside the shell too. Staff: admin*.
 // Customers and cleaners share one login; cleaners only see #cleaner, customers never do.
-const ROUTES=['home','dashboard','detail','book','bookings','cleaner','login','signup','admin-login','admin'],ALIAS={start:'home',track:'bookings',jobs:'cleaner'};
-const STAFF=['admin','admin-login'],APP=['dashboard','detail','book','bookings','cleaner'],MEMBER=['dashboard','book','bookings','cleaner'];
+const ROUTES=['home','dashboard','detail','book','bookings','cleaner','login','signup','admin-login','admin','admin-cleaners'],ALIAS={start:'home',track:'bookings',jobs:'cleaner'};
+// Admin pages need the key; the sidebar switches between them.
+const ADMIN=['admin','admin-cleaners'],STAFF=[...ADMIN,'admin-login'],APP=['dashboard','detail','book','bookings','cleaner'],MEMBER=['dashboard','book','bookings','cleaner'];
 const isCleaner=u=>u?.role==='cleaner';
 const route=()=>{const id=location.hash.slice(1);const r=ALIAS[id]||id;return ROUTES.includes(r)?r:'home'};
 
@@ -41,7 +42,8 @@ function App(){
   const update=(b,status,cleanerId,completedChecklist)=>run(async()=>{await adminSend('/admin/bookings/'+b.id,'PATCH',{status,cleanerId,completedChecklist});await refreshAdmin(adminKey);setMessage('Booking updated.');},b.id+status);
   // Resolves true when the account was created, so the form can clear itself.
   const createCleaner=data=>{let ok=false;return run(async()=>{const c=await adminSend('/admin/cleaners','POST',data);await refreshAdmin(adminKey);setMessage(c.name+' can now log in on the normal login page with '+c.email+'.');ok=true;},'cleaner-create').then(()=>ok);};
-  const updateCleaner=(c,patch,field)=>run(async()=>{await adminSend('/admin/cleaners/'+c.id,'PATCH',patch);await refreshAdmin(adminKey);setMessage(c.name+' updated.');},'cleaner-'+c.id+field);
+  // Resolves true when saved, so the edit form can close.
+  const updateCleaner=(c,patch,field)=>{let ok=false;return run(async()=>{const u=await adminSend('/admin/cleaners/'+c.id,'PATCH',patch);await refreshAdmin(adminKey);setMessage(u.name+(patch.active===false?' was deactivated.':patch.active===true?' was reactivated.':'’s details were saved.'));ok=true;},'cleaner-'+c.id+field).then(()=>ok);};
   const clearAdmin=()=>{setAdminKey('');setRows([]);setStaffCleaners([]);};
   const loadJobs=()=>api('/cleaner/jobs').then(setCleanerData).catch(e=>{setError(e.message);setCleanerData({blocked:true});});
   const advance=(job,status,completedChecklist)=>run(async()=>{const j=await api('/cleaner/jobs/'+job.id,{method:'PATCH',body:JSON.stringify({status,completedChecklist})});setCleanerData(d=>({...d,jobs:d.jobs.map(x=>x.id===j.id?j:x)}));setMessage(status==='completed'?'Job complete. Nice work!':'Job updated. The customer can see your progress.');},job.id+status);
@@ -50,7 +52,7 @@ function App(){
   const go=id=>{if(!STAFF.includes(id))clearAdmin();show(id);setError('');setMessage('');};
   useEffect(()=>{const sync=()=>{if(location.hash==='#main-content')return;setTab(route());setError('');};window.addEventListener('hashchange',sync);return()=>window.removeEventListener('hashchange',sync)},[]);
   // Route guards run once the session is known.
-  useEffect(()=>{if(tab==='admin'&&!adminKey)redirect('admin-login');if(!STAFF.includes(tab))clearAdmin();if(!authReady)return;if(MEMBER.includes(tab)&&!user){try{sessionStorage.setItem('after-login',tab)}catch{}redirect('login');setMessage(tab==='book'?'Please log in or sign up to book a clean.':tab==='cleaner'?'Please log in to see your jobs.':'Please log in to see your bookings.');}else if(user&&['home','login','signup'].includes(tab))redirect(homeFor(user));else if(isCleaner(user)&&APP.includes(tab)&&tab!=='cleaner')redirect('cleaner');else if(user&&!isCleaner(user)&&tab==='cleaner')redirect('dashboard');},[tab,adminKey,user,authReady]);
+  useEffect(()=>{if(ADMIN.includes(tab)&&!adminKey)redirect('admin-login');if(!STAFF.includes(tab))clearAdmin();if(!authReady)return;if(MEMBER.includes(tab)&&!user){try{sessionStorage.setItem('after-login',tab)}catch{}redirect('login');setMessage(tab==='book'?'Please log in or sign up to book a clean.':tab==='cleaner'?'Please log in to see your jobs.':'Please log in to see your bookings.');}else if(user&&['home','login','signup'].includes(tab))redirect(homeFor(user));else if(isCleaner(user)&&APP.includes(tab)&&tab!=='cleaner')redirect('cleaner');else if(user&&!isCleaner(user)&&tab==='cleaner')redirect('dashboard');},[tab,adminKey,user,authReady]);
   // Route loads: drive the top progress bar and fetch what the next screen needs.
   useEffect(()=>{if(!authReady)return;let live=true;setNavigating(true);const jobs=[new Promise(r=>setTimeout(r,240))];
     if(isCleaner(user)&&tab==='cleaner')jobs.push(api('/cleaner/jobs').then(d=>live&&setCleanerData(d)).catch(e=>{if(live){setError(e.message);setCleanerData({blocked:true})}}));
@@ -68,8 +70,8 @@ function App(){
   const layout=STAFF.includes(tab)?'staff':APP.includes(tab)&&(user||(!authReady&&MEMBER.includes(tab)))?'app':'public';
   const body=configFailed&&!config?<section className="panel error-state" role="alert"><h1>We couldn't load Sweep Dreams</h1><p className="muted">The server didn't respond. Check your connection, then try again.</p><Button busy={busyKey==='config'} onClick={()=>run(loadConfig,'config')}>Try again</Button></section>
    :!ready||(MEMBER.includes(tab)&&!user)||(APP.includes(tab)&&(tab==='cleaner')!==isCleaner(user))||(tab==='cleaner'&&cleanerData===null)||(tab==='dashboard'&&accountBookings===null)?(tab==='dashboard'?<DashboardSkeleton/>:<PageSkeleton/>)
-   :tab==='admin-login'||(tab==='admin'&&!adminKey)?<AdminLogin busy={busyKey==='admin-login'} go={go} onLogin={k=>run(async()=>{await refreshAdmin(k);setAdminKey(k);show('admin')},'admin-login')}/>
-   :tab==='admin'?<AdminView config={config} rows={rows} cleaners={staffCleaners} busyKey={busyKey} refresh={()=>run(()=>refreshAdmin(adminKey),'admin-refresh')} update={update} createCleaner={createCleaner} updateCleaner={updateCleaner}/>
+   :tab==='admin-login'||(ADMIN.includes(tab)&&!adminKey)?<AdminLogin busy={busyKey==='admin-login'} go={go} onLogin={k=>run(async()=>{await refreshAdmin(k);setAdminKey(k);show('admin')},'admin-login')}/>
+   :ADMIN.includes(tab)?<AdminView section={tab==='admin-cleaners'?'cleaners':'bookings'} config={config} rows={rows} cleaners={staffCleaners} busyKey={busyKey} refresh={()=>run(()=>refreshAdmin(adminKey),'admin-refresh')} update={update} createCleaner={createCleaner} updateCleaner={updateCleaner}/>
    :tab==='cleaner'?<CleanerView user={user} config={config} data={cleanerData} busyKey={busyKey} advance={advance} refresh={()=>run(loadJobs,'cleaner-refresh')}/>
    :['login','signup'].includes(tab)?<AuthView key={tab} mode={tab} go={go} onSuccess={onAuth}/>
    :tab==='dashboard'?<Dashboard user={user} config={config} bookings={accountBookings} go={go} choose={choose} search={search} setSearch={setSearch} open={openBooking}/>

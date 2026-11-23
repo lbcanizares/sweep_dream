@@ -40,7 +40,7 @@ export async function createApp(db, adminKey) {
   // New name so existing databases get it alongside the older index instead of an options conflict.
   await bookings.createIndex({date:1,time:1}, {name:'reserved_slots_v2',unique:true,partialFilterExpression:{status:{$in:RESERVED}}});
   await bookings.createIndex({cleanerId:1,date:1});
-  const users = db.collection('users'), cleaners = db.collection('cleaners');
+  const users = db.collection('users'), cleaners = db.collection('cleaners'), sessions = db.collection('sessions');
   await cleaners.createIndex({id:1}, {unique:true});
   await cleaners.createIndex({userId:1}, {unique:true});
   const admin = (req,res,next) => req.headers.authorization === `Bearer ${adminKey}` ? next() : res.status(401).json({error:'Enter the correct administrator key.'});
@@ -128,17 +128,33 @@ export async function createApp(db, adminKey) {
   }catch(e){if(e.code===11000)return res.status(409).json({error:'An account already uses this email.'});next(e)}});
   app.patch('/api/admin/cleaners/:id',admin,async(req,res,next)=>{try{
     const c=await cleaners.findOne({id:req.params.id});if(!c)return res.status(404).json({error:'Cleaner not found.'});
-    const {active,idChecked,backgroundChecked}=req.body||{};
-    if([active,idChecked,backgroundChecked].some(v=>v!==undefined&&typeof v!=='boolean'))return res.status(400).json({error:'Invalid cleaner update.'});
-    const set={};
+    const {name,email,password,phone,photoUrl,bio,serviceTypes,active,idChecked,backgroundChecked}=req.body||{};
+    // Every field is optional; only the ones sent are checked and changed.
+    const bad=(name!==undefined&&(typeof name!=='string'||name.trim().length<2||name.length>100))||(email!==undefined&&!validEmail(email))||(password!==undefined&&!validPassword(password))
+      ||!optionalText(phone,40)||!optionalText(bio,300)||!validPhotoUrl(photoUrl)||(serviceTypes!==undefined&&(!Array.isArray(serviceTypes)||!serviceTypes.length||!serviceTypes.every(t=>SERVICE_TYPES.includes(t))))
+      ||[active,idChecked,backgroundChecked].some(v=>v!==undefined&&typeof v!=='boolean');
+    if(bad)return res.status(400).json({error:'Check the details: name of 2+ characters, a valid email, a password of 8–128 characters, at least one service type, and a photo link starting with http:// or https://.'});
+    const set={},userSet={};
+    if(name!==undefined)set.name=userSet.name=name.trim();
+    if(email!==undefined)userSet.email=email.trim().toLowerCase();
+    if(password!==undefined)Object.assign(userSet,await hashPassword(password));
+    if(phone!==undefined)set.phone=phone.trim();
+    if(photoUrl!==undefined)set.photoUrl=photoUrl.trim();
+    if(bio!==undefined)set.bio=bio.trim();
+    if(serviceTypes!==undefined)set.serviceTypes=[...new Set(serviceTypes)];
     if(active!==undefined)set.active=active;
     if(idChecked!==undefined)set['screening.idChecked']=idChecked;
     if(backgroundChecked!==undefined)set['screening.backgroundChecked']=backgroundChecked;
     if(idChecked!==undefined||backgroundChecked!==undefined)set['screening.checkedAt']=new Date().toISOString();
+    if(Object.keys(userSet).length)await users.updateOne({id:c.userId},{$set:userSet});
+    // A new password signs the cleaner out everywhere.
+    if(password!==undefined)await sessions.deleteMany({userId:c.userId});
     if(Object.keys(set).length)await cleaners.updateOne({id:c.id},{$set:set});
+    // Keep the name and photo customers see on their bookings in step with the profile.
+    if(set.name!==undefined||set.photoUrl!==undefined){const shown={};if(set.name!==undefined)shown.cleaner=set.name;if(set.photoUrl!==undefined)shown.cleanerPhotoUrl=set.photoUrl||null;await bookings.updateMany({cleanerId:c.id},{$set:shown});}
     const updated=await cleaners.findOne({id:c.id});const u=await users.findOne({id:c.userId});
     res.json({...publicCleaner(updated),email:u?.email||null});
-  }catch(e){next(e)}});
+  }catch(e){if(e.code===11000)return res.status(409).json({error:'An account already uses this email.'});next(e)}});
 
   // Cleaner portal: a cleaner sees and updates only the jobs assigned to them.
   app.get('/api/cleaner/jobs',requireCleaner,async(req,res,next)=>{try{
