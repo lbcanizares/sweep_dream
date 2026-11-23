@@ -40,6 +40,7 @@ function App(){
   const refreshAdmin=async k=>{const auth={headers:{Authorization:'Bearer '+k}};const [b,c]=await Promise.all([api('/admin/bookings',auth),api('/admin/cleaners',auth)]);setRows(b);setStaffCleaners(c);};
   const adminSend=(path,method,body)=>api(path,{method,headers:{Authorization:'Bearer '+adminKey},body:JSON.stringify(body)});
   const update=(b,status,cleanerId,completedChecklist)=>run(async()=>{await adminSend('/admin/bookings/'+b.id,'PATCH',{status,cleanerId,completedChecklist});await refreshAdmin(adminKey);setMessage('Booking updated.');},b.id+status);
+  const reassign=(b,cleanerId)=>run(async()=>{const r=await adminSend('/admin/bookings/'+b.id+'/reassign','POST',{cleanerId});await refreshAdmin(adminKey);setMessage('Booking #'+b.id+' is now assigned to '+r.cleaner+'.');},b.id+'reassign');
   // Resolves true when the account was created, so the form can clear itself.
   const createCleaner=data=>{let ok=false;return run(async()=>{const c=await adminSend('/admin/cleaners','POST',data);await refreshAdmin(adminKey);setMessage(c.name+' can now log in on the normal login page with '+c.email+'.');ok=true;},'cleaner-create').then(()=>ok);};
   // Resolves true when saved, so the edit form can close.
@@ -71,7 +72,7 @@ function App(){
   const body=configFailed&&!config?<section className="panel error-state" role="alert"><h1>We couldn't load Sweep Dreams</h1><p className="muted">The server didn't respond. Check your connection, then try again.</p><Button busy={busyKey==='config'} onClick={()=>run(loadConfig,'config')}>Try again</Button></section>
    :!ready||(MEMBER.includes(tab)&&!user)||(APP.includes(tab)&&(tab==='cleaner')!==isCleaner(user))||(tab==='cleaner'&&cleanerData===null)||(tab==='dashboard'&&accountBookings===null)?(tab==='dashboard'?<DashboardSkeleton/>:<PageSkeleton/>)
    :tab==='admin-login'||(ADMIN.includes(tab)&&!adminKey)?<AdminLogin busy={busyKey==='admin-login'} go={go} onLogin={k=>run(async()=>{await refreshAdmin(k);setAdminKey(k);show('admin')},'admin-login')}/>
-   :ADMIN.includes(tab)?<AdminView section={tab==='admin-cleaners'?'cleaners':'bookings'} config={config} rows={rows} cleaners={staffCleaners} busyKey={busyKey} refresh={()=>run(()=>refreshAdmin(adminKey),'admin-refresh')} update={update} createCleaner={createCleaner} updateCleaner={updateCleaner}/>
+   :ADMIN.includes(tab)?<AdminView section={tab==='admin-cleaners'?'cleaners':'bookings'} config={config} rows={rows} cleaners={staffCleaners} busyKey={busyKey} refresh={()=>run(()=>refreshAdmin(adminKey),'admin-refresh')} update={update} reassign={reassign} createCleaner={createCleaner} updateCleaner={updateCleaner} go={go}/>
    :tab==='cleaner'?<CleanerView user={user} config={config} data={cleanerData} busyKey={busyKey} advance={advance} refresh={()=>run(loadJobs,'cleaner-refresh')}/>
    :['login','signup'].includes(tab)?<AuthView key={tab} mode={tab} go={go} onSuccess={onAuth}/>
    :tab==='dashboard'?<Dashboard user={user} config={config} bookings={accountBookings} go={go} choose={choose} search={search} setSearch={setSearch} open={openBooking}/>

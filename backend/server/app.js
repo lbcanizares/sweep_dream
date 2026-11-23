@@ -24,6 +24,8 @@ const RESERVED = ['confirmed','on_the_way','in_progress','completed'];
 // The only moves a cleaner may make on their own job, one step at a time.
 const CLEANER_NEXT = {confirmed:'on_the_way', on_the_way:'in_progress', in_progress:'completed'};
 const SERVICE_TYPES = ['Dorm','Home'];
+// A cleaner is responsible for these jobs until they are finished, cancelled or reassigned.
+const ACTIVE_JOBS = ['confirmed','on_the_way','in_progress'];
 const checklistDone = list => Array.isArray(list) && checklist.every(c=>list.includes(c));
 const optionalText = (v,max) => v===undefined || v==='' || (typeof v==='string' && v.length<=max);
 const validPhotoUrl = v => v===undefined || v==='' || (typeof v==='string' && v.length<=500 && /^https?:\/\/\S+$/.test(v));
@@ -108,6 +110,19 @@ export async function createApp(db, adminKey) {
     res.json(publicBooking(await bookings.findOne({id:b.id})));
   }catch(e){if(e.code===11000)return res.status(409).json({error:'Another booking is confirmed for this slot.'});next(e);}});
 
+  // Move a confirmed job that hasn't started to another screened cleaner (e.g. before deactivating the first one).
+  app.post('/api/admin/bookings/:id/reassign',admin,async(req,res,next)=>{try{
+    const b=await bookings.findOne({id:req.params.id});if(!b)return res.status(404).json({error:'Booking not found.'});
+    if(b.status!=='confirmed')return res.status(409).json({error:'Only confirmed jobs that haven’t started can be reassigned. Finish or cancel jobs already underway.'});
+    const {cleanerId}=req.body||{};
+    const c=typeof cleanerId==='string'?await cleaners.findOne({id:cleanerId}):null;
+    if(!c||!assignable(c))return res.status(400).json({error:'Choose an active cleaner whose ID and background checks are done.'});
+    if(c.id===b.cleanerId)return res.status(400).json({error:'This job is already assigned to '+c.name+'.'});
+    const r=await bookings.updateOne({id:b.id,status:'confirmed',cleanerId:b.cleanerId},{$set:{cleanerId:c.id,cleaner:c.name,cleanerPhotoUrl:c.photoUrl||null},$push:{statusHistory:{...historyEntry('confirmed','admin'),reassignedFrom:b.cleanerId||null}}});
+    if(!r.modifiedCount)return res.status(409).json({error:'Booking changed. Refresh and try again.'});
+    res.json(publicBooking(await bookings.findOne({id:b.id})));
+  }catch(e){next(e)}});
+
   // Cleaner accounts: created by the admin only (public sign-up always makes customers).
   app.get('/api/admin/cleaners',admin,async(req,res,next)=>{try{
     const list=await cleaners.find().sort({createdAt:-1}).toArray();
@@ -134,6 +149,11 @@ export async function createApp(db, adminKey) {
       ||!optionalText(phone,40)||!optionalText(bio,300)||!validPhotoUrl(photoUrl)||(serviceTypes!==undefined&&(!Array.isArray(serviceTypes)||!serviceTypes.length||!serviceTypes.every(t=>SERVICE_TYPES.includes(t))))
       ||[active,idChecked,backgroundChecked].some(v=>v!==undefined&&typeof v!=='boolean');
     if(bad)return res.status(400).json({error:'Check the details: name of 2+ characters, a valid email, a password of 8–128 characters, at least one service type, and a photo link starting with http:// or https://.'});
+    // Deactivating would strand customers mid-booking, so active jobs must be cleared first.
+    if(active===false&&c.active){
+      const open=await bookings.find({cleanerId:c.id,status:{$in:ACTIVE_JOBS}}).sort({date:1,time:1}).toArray();
+      if(open.length)return res.status(409).json({error:`${c.name} still has ${open.length} active job${open.length>1?'s':''} (${open.map(b=>'#'+b.id+' on '+b.date+' '+b.time).join(', ')}). Finish, cancel or reassign ${open.length>1?'them':'it'} on Bookings first.`,activeJobs:open.map(b=>b.id)});
+    }
     const set={},userSet={};
     if(name!==undefined)set.name=userSet.name=name.trim();
     if(email!==undefined)userSet.email=email.trim().toLowerCase();

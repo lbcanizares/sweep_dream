@@ -326,6 +326,8 @@ code{display:block;margin-top:8px;padding:12px;border-radius:10px;background:var
 .cleaner-actions{display:flex;flex-wrap:wrap;gap:8px}
 .cleaner-row.editing{margin:0 -12px;padding:14px 12px;border-radius:12px;background:var(--navy-wash)}
 .cleaner-actions{align-items:center;gap:16px}
+.locked-note{margin:0}.locked-note .text-link{font-size:13px;text-decoration:underline}
+.admin-booking details .secondary{margin-top:4px}
 .cleaner-form.is-editing{border-color:var(--navy);box-shadow:0 0 0 1px var(--navy)}
 .cleaner-form{scroll-margin-top:calc(var(--top) + 16px)}
 .field-grid .wide,.summary .wide{grid-column:1 / -1}
