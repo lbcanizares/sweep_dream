@@ -1,23 +1,27 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {Button,initials} from './ui.jsx';
 
+// Jobs a cleaner is still responsible for; while any exist they can't be deactivated.
+const ACTIVE_JOBS=['confirmed','on_the_way','in_progress'];
+
 const blank={name:'',email:'',password:'',phone:'',photoUrl:'',bio:'',serviceTypes:['Dorm','Home'],idChecked:false,backgroundChecked:false};
 const fromCleaner=c=>({name:c.name||'',email:c.email||'',password:'',phone:c.phone||'',photoUrl:c.photoUrl||'',bio:c.bio||'',serviceTypes:c.serviceTypes?.length?c.serviceTypes:['Dorm','Home'],idChecked:!!c.screening?.idChecked,backgroundChecked:!!c.screening?.backgroundChecked});
 export const canAssign=c=>c.active&&c.screening?.idChecked&&c.screening?.backgroundChecked;
 const screeningText=c=>c.screening?.idChecked&&c.screening?.backgroundChecked?'Screening complete':!c.screening?.idChecked&&!c.screening?.backgroundChecked?'Screening not started':c.screening?.idChecked?'Background check pending':'ID check pending';
 
-function CleanerRow({c,editing,busyKey,edit,updateCleaner}){
- const key='cleaner-'+c.id;
+function CleanerRow({c,jobs,editing,busyKey,edit,updateCleaner,go}){
+ const key='cleaner-'+c.id,locked=c.active&&jobs.length>0;
  return <li className={'cleaner-row'+(editing?' editing':'')}>
   <div className="cleaner-who">{c.photoUrl?<img className="avatar photo" src={c.photoUrl} alt=""/>:<span className="avatar" aria-hidden="true">{initials(c.name)}</span>}<div><strong>{c.name}</strong><small>{c.email}{c.phone&&' · '+c.phone}</small><small>{c.serviceTypes?.join(', ')} · {screeningText(c)}{!c.active&&' · Inactive'}</small></div></div>
   <div className="cleaner-actions">
    <button type="button" className="text-link" disabled={!!busyKey} onClick={()=>edit(c)} aria-label={'Edit '+c.name}>{editing?'Editing…':'Edit details'}</button>
-   <Button className={'secondary small'+(c.active?' danger':'')} busy={busyKey===key+'active'} disabled={!!busyKey} onClick={()=>updateCleaner(c,{active:!c.active},'active')}>{c.active?'Deactivate':'Reactivate'}</Button>
+   <Button className={'secondary small'+(c.active?' danger':'')} busy={busyKey===key+'active'} disabled={!!busyKey||locked} aria-describedby={locked?key+'-locked':undefined} onClick={()=>updateCleaner(c,{active:!c.active},'active')}>{c.active?'Deactivate':'Reactivate'}</Button>
   </div>
+  {locked&&<p className="fine locked-note" id={key+'-locked'}>{jobs.length} active job{jobs.length>1?'s':''} ({jobs.map(b=>b.date+' '+b.time).join(', ')}). To deactivate, reassign, finish or cancel {jobs.length>1?'them':'it'} on <a className="text-link" href="#admin" onClick={e=>{e.preventDefault();go('admin')}}>Bookings</a> first.</p>}
  </li>;
 }
 
-export default function AdminCleaners({cleaners,busyKey,createCleaner,updateCleaner}){
+export default function AdminCleaners({cleaners,rows=[],busyKey,createCleaner,updateCleaner,go}){
  const [form,setForm]=useState(blank),[editing,setEditing]=useState(null),formRef=useRef(null);
  // If the cleaner being edited disappears from the list (e.g. after a refresh), leave edit mode.
  useEffect(()=>{if(editing&&!cleaners.some(c=>c.id===editing.id)){setEditing(null);setForm(blank)}},[cleaners,editing]);
@@ -37,7 +41,7 @@ export default function AdminCleaners({cleaners,busyKey,createCleaner,updateClea
  const busy=!!busyKey,saving=busyKey===(editing?'cleaner-'+editing.id+'edit':'cleaner-create');
  return <div className="admin-cleaners">
   <section className="panel"><h2>All cleaners</h2><p className="muted">Only screened, active cleaners can be assigned. Deactivating a cleaner blocks their access to the cleaner portal.</p>
-   {cleaners.length?<ul className="cleaner-list">{cleaners.map(c=><CleanerRow key={c.id} c={c} editing={editing?.id===c.id} busyKey={busyKey} edit={edit} updateCleaner={updateCleaner}/>)}</ul>:<div className="panel-empty"><p><strong>No cleaners yet.</strong> Add your first cleaner with the form.</p></div>}
+   {cleaners.length?<ul className="cleaner-list">{cleaners.map(c=><CleanerRow key={c.id} c={c} jobs={rows.filter(b=>b.cleanerId===c.id&&ACTIVE_JOBS.includes(b.status))} editing={editing?.id===c.id} busyKey={busyKey} edit={edit} updateCleaner={updateCleaner} go={go}/>)}</ul>:<div className="panel-empty"><p><strong>No cleaners yet.</strong> Add your first cleaner with the form.</p></div>}
   </section>
   <form ref={formRef} className={'panel cleaner-form'+(editing?' is-editing':'')} onSubmit={submit}>
    <h2>{editing?'Edit '+editing.name:'Add a cleaner'}</h2>

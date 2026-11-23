@@ -104,6 +104,23 @@ test('MERN booking lifecycle, login requirement, ownership, validation, and slot
     const confirmed=await request('/admin/bookings/'+id,'PATCH',{status:'confirmed',cleanerId:ana.data.id},admin);
     assert.equal(confirmed.status,200);assert.equal(confirmed.data.cleaner,'Ana Demo');assert.equal(confirmed.data.cleanerPhotoUrl,cleanerInput.photoUrl);
     assert.equal((await request('/admin/bookings/'+b.data.id,'PATCH',{status:'confirmed',cleanerId:ana.data.id},admin)).status,409);
+
+    // A cleaner with an active job can't be deactivated until it is reassigned, finished or cancelled.
+    const blocked=await request('/admin/cleaners/'+ana.data.id,'PATCH',{active:false},admin);
+    assert.equal(blocked.status,409);assert.deepEqual(blocked.data.activeJobs,[id]);
+    assert.equal((await request('/admin/cleaners/'+ana.data.id,'PATCH',{phone:'0917 000 1111'},admin)).status,200);
+
+    // Reassigning a confirmed job: only to another screened, active cleaner.
+    const dee=await request('/admin/cleaners','POST',{...cleanerInput,name:'Dee Demo',email:'dee@example.test'},admin);
+    assert.equal((await request('/admin/bookings/'+id+'/reassign','POST',{cleanerId:unscreened.data.id},admin)).status,400);
+    assert.equal((await request('/admin/bookings/'+id+'/reassign','POST',{cleanerId:ana.data.id},admin)).status,400);
+    assert.equal((await request('/admin/bookings/'+id+'/reassign','POST',{cleanerId:dee.data.id},me)).status,401);
+    const moved=await request('/admin/bookings/'+id+'/reassign','POST',{cleanerId:dee.data.id},admin);
+    assert.equal(moved.status,200);assert.equal(moved.data.cleaner,'Dee Demo');assert.equal(moved.data.status,'confirmed');
+    assert.equal((await request('/cleaner/jobs','GET',undefined,anaCookie)).data.jobs.length,0);
+    assert.equal((await request('/admin/cleaners/'+ana.data.id,'PATCH',{active:false},admin)).status,200);
+    assert.equal((await request('/admin/cleaners/'+ana.data.id,'PATCH',{active:true},admin)).status,200);
+    assert.equal((await request('/admin/bookings/'+id+'/reassign','POST',{cleanerId:ana.data.id},admin)).status,200);
     assert.equal((await request('/bookings','POST',input,me)).status,409);
     const available=await request('/availability?date='+date);assert.equal(available.status,200);assert.ok(!available.data.slots.includes('09:00'));assert.equal((await request('/availability?date=bad')).status,400);
 
@@ -115,6 +132,9 @@ test('MERN booking lifecycle, login requirement, ownership, validation, and slot
     assert.equal((await request('/cleaner/jobs/'+id,'PATCH',{status:'on_the_way'},caraCookie)).status,404);
     assert.equal((await request('/cleaner/jobs/'+id,'PATCH',{status:'in_progress'},anaCookie)).status,409);
     assert.equal((await request('/cleaner/jobs/'+id,'PATCH',{status:'on_the_way'},anaCookie)).data.status,'on_the_way');
+    // Once the cleaner has set off, the job can't be reassigned and they still can't be deactivated.
+    assert.equal((await request('/admin/bookings/'+id+'/reassign','POST',{cleanerId:dee.data.id},admin)).status,409);
+    assert.equal((await request('/admin/cleaners/'+ana.data.id,'PATCH',{active:false},admin)).status,409);
     assert.equal((await request('/bookings/'+id+'/cancel','POST',{},me)).status,409);
     assert.ok(!(await request('/availability?date='+date)).data.slots.includes('09:00'));
     assert.equal((await request('/cleaner/jobs/'+id,'PATCH',{status:'in_progress'},anaCookie)).status,200);
@@ -124,7 +144,8 @@ test('MERN booking lifecycle, login requirement, ownership, validation, and slot
     assert.equal((await request('/cleaner/jobs/'+id,'PATCH',{status:'completed',completedChecklist:checklist},anaCookie)).status,200);
     assert.equal((await request('/cleaner/jobs/'+id,'PATCH',{status:'completed',completedChecklist:checklist},anaCookie)).status,409);
     const done=await request('/bookings/'+id,'GET',undefined,me);
-    assert.equal(done.data.status,'completed');assert.deepEqual(done.data.statusHistory.map(h=>h.by+':'+h.status),['customer:pending','admin:confirmed','cleaner:on_the_way','cleaner:in_progress','cleaner:completed']);
+    assert.equal(done.data.status,'completed');assert.deepEqual(done.data.statusHistory.map(h=>h.by+':'+h.status),['customer:pending','admin:confirmed','admin:confirmed','admin:confirmed','cleaner:on_the_way','cleaner:in_progress','cleaner:completed']);
+    assert.equal(done.data.statusHistory[2].reassignedFrom,ana.data.id);
 
     // The admin can edit a cleaner's details; customers see the updated name.
     assert.equal((await request('/admin/cleaners/'+ana.data.id,'PATCH',{email:'cara@example.test'},admin)).status,409);
