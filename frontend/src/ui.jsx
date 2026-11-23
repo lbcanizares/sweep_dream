@@ -6,7 +6,9 @@ export const bookingTotal=(config,form)=>{const s=config.services.find(x=>x.id==
 export const paymentName=(config,id)=>config?.paymentMethods.find(p=>p.id===id)?.name||'Cash on service';
 export const fmtDate=d=>new Date(d+'T12:00:00').toLocaleDateString('en-PH',{weekday:'short',day:'numeric',month:'short'});
 export const initials=name=>(name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-export const statusLabel={pending:'Pending confirmation',confirmed:'Confirmed',completed:'Completed',cancelled:'Cancelled'};
+export const statusLabel={pending:'Pending confirmation',confirmed:'Confirmed',on_the_way:'Cleaner on the way',in_progress:'Cleaning in progress',completed:'Completed',cancelled:'Cancelled'};
+// Statuses where the booking is still ahead or underway.
+export const ACTIVE_STATUSES=['pending','confirmed','on_the_way','in_progress'];
 
 // Navy ring spinner; inherits currentColor inside buttons so it reads on navy and on white.
 export function Spinner({size=18,label}){return <span className="spinner" style={{width:size,height:size}} role={label?'status':undefined} aria-label={label} aria-hidden={label?undefined:true}/>;}

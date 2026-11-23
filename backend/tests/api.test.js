@@ -73,15 +73,64 @@ test('MERN booking lifecycle, login requirement, ownership, validation, and slot
     assert.equal((await request('/bookings/'+id+'/feedback','POST',{rating:5},me)).status,409);
     assert.equal((await request('/admin/bookings/'+id,'PATCH',{status:'completed',completedChecklist:checklist},admin)).status,409);
 
+    // Public sign-up always makes customers, even if a role is sent.
+    const sneaky=await request('/auth/signup','POST',{name:'Sneaky Demo',email:'sneaky@example.test',password:'SneakyPassword123!',role:'cleaner'});
+    assert.equal(sneaky.status,201);assert.equal(sneaky.data.user.role,'customer');
+
+    // Only the admin can create cleaner accounts.
+    const cleanerInput={name:'Ana Demo',email:'ana@example.test',password:'CleanerPass123!',phone:'0917 000 0000',photoUrl:'https://example.test/ana.jpg',serviceTypes:['Dorm'],idChecked:true,backgroundChecked:true};
+    assert.equal((await request('/admin/cleaners','POST',cleanerInput)).status,401);
+    assert.equal((await request('/admin/cleaners','POST',cleanerInput,me)).status,401);
+    assert.equal((await request('/admin/cleaners','POST',{...cleanerInput,photoUrl:'javascript:alert(1)'},admin)).status,400);
+    const ana=await request('/admin/cleaners','POST',cleanerInput,admin);assert.equal(ana.status,201);assert.equal(ana.data.passwordHash,undefined);
+    assert.equal((await request('/admin/cleaners','POST',cleanerInput,admin)).status,409);
+    const unscreened=await request('/admin/cleaners','POST',{...cleanerInput,name:'Ben Demo',email:'ben@example.test'},admin);
+    assert.equal((await request('/admin/cleaners/'+unscreened.data.id,'PATCH',{idChecked:false,backgroundChecked:false},admin)).status,200);
+    assert.equal((await request('/admin/cleaners','GET',undefined,admin)).data.length,2);
+
+    // The cleaner logs in on the same page as customers and gets the cleaner role.
+    const anaLogin=await fetch(base+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'ana@example.test',password:'CleanerPass123!'})});
+    assert.equal(anaLogin.status,200);assert.equal((await anaLogin.json()).user.role,'cleaner');
+    const anaCookie={Cookie:anaLogin.headers.get('set-cookie').split(';')[0]};
+    assert.equal((await request('/cleaner/jobs','GET',undefined,anaCookie)).data.jobs.length,0);
+    assert.equal((await request('/cleaner/jobs','GET',undefined,me)).status,403);
+    assert.equal((await request('/cleaner/jobs')).status,401);
+
+    // Assignment needs a screened, active cleaner.
+    assert.equal((await request('/admin/bookings/'+id,'PATCH',{status:'confirmed',cleanerId:'missing'},admin)).status,400);
+    assert.equal((await request('/admin/bookings/'+id,'PATCH',{status:'confirmed',cleanerId:unscreened.data.id},admin)).status,400);
+
     // Slot conflicts.
-    assert.equal((await request('/admin/bookings/'+id,'PATCH',{status:'confirmed',cleaner:'Demo Cleaner'},admin)).status,200);
-    assert.equal((await request('/admin/bookings/'+b.data.id,'PATCH',{status:'confirmed',cleaner:'Demo Cleaner'},admin)).status,409);
+    const confirmed=await request('/admin/bookings/'+id,'PATCH',{status:'confirmed',cleanerId:ana.data.id},admin);
+    assert.equal(confirmed.status,200);assert.equal(confirmed.data.cleaner,'Ana Demo');assert.equal(confirmed.data.cleanerPhotoUrl,cleanerInput.photoUrl);
+    assert.equal((await request('/admin/bookings/'+b.data.id,'PATCH',{status:'confirmed',cleanerId:ana.data.id},admin)).status,409);
     assert.equal((await request('/bookings','POST',input,me)).status,409);
     const available=await request('/availability?date='+date);assert.equal(available.status,200);assert.ok(!available.data.slots.includes('09:00'));assert.equal((await request('/availability?date=bad')).status,400);
 
+    // The cleaner moves their own job forward one step at a time.
+    const jobs=await request('/cleaner/jobs','GET',undefined,anaCookie);assert.equal(jobs.data.jobs.length,1);assert.equal(jobs.data.jobs[0].customer,'Dwight Demo');assert.equal(jobs.data.jobs[0].userId,undefined);
+    const otherCleaner=await request('/admin/cleaners','POST',{...cleanerInput,name:'Cara Demo',email:'cara@example.test'},admin);
+    const caraLogin=await fetch(base+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'cara@example.test',password:'CleanerPass123!'})});
+    const caraCookie={Cookie:caraLogin.headers.get('set-cookie').split(';')[0]};
+    assert.equal((await request('/cleaner/jobs/'+id,'PATCH',{status:'on_the_way'},caraCookie)).status,404);
+    assert.equal((await request('/cleaner/jobs/'+id,'PATCH',{status:'in_progress'},anaCookie)).status,409);
+    assert.equal((await request('/cleaner/jobs/'+id,'PATCH',{status:'on_the_way'},anaCookie)).data.status,'on_the_way');
+    assert.equal((await request('/bookings/'+id+'/cancel','POST',{},me)).status,409);
+    assert.ok(!(await request('/availability?date='+date)).data.slots.includes('09:00'));
+    assert.equal((await request('/cleaner/jobs/'+id,'PATCH',{status:'in_progress'},anaCookie)).status,200);
+
+    // Completion requires the full checklist.
+    assert.equal((await request('/cleaner/jobs/'+id,'PATCH',{status:'completed',completedChecklist:checklist.slice(1)},anaCookie)).status,400);
+    assert.equal((await request('/cleaner/jobs/'+id,'PATCH',{status:'completed',completedChecklist:checklist},anaCookie)).status,200);
+    assert.equal((await request('/cleaner/jobs/'+id,'PATCH',{status:'completed',completedChecklist:checklist},anaCookie)).status,409);
+    const done=await request('/bookings/'+id,'GET',undefined,me);
+    assert.equal(done.data.status,'completed');assert.deepEqual(done.data.statusHistory.map(h=>h.by+':'+h.status),['customer:pending','admin:confirmed','cleaner:on_the_way','cleaner:in_progress','cleaner:completed']);
+
+    // A deactivated cleaner loses access to the portal.
+    assert.equal((await request('/admin/cleaners/'+otherCleaner.data.id,'PATCH',{active:false},admin)).status,200);
+    assert.equal((await request('/cleaner/jobs','GET',undefined,caraCookie)).status,403);
+
     // Completion.
-    assert.equal((await request('/admin/bookings/'+id,'PATCH',{status:'completed',completedChecklist:[]},admin)).status,400);
-    assert.equal((await request('/admin/bookings/'+id,'PATCH',{status:'completed',completedChecklist:checklist},admin)).status,200);
     assert.ok(!(await request('/availability?date='+date)).data.slots.includes('09:00'));
     assert.equal((await request('/bookings/'+id+'/cancel','POST',{},me)).status,409);
 

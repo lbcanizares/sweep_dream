@@ -1,5 +1,5 @@
 import express from 'express';
-import {installAuth} from './auth.js';
+import {installAuth,hashPassword,validEmail,validPassword} from './auth.js';
 import { randomBytes } from 'node:crypto';
 
 export const checklist = ['Sweep and mop accessible floors', 'Wipe desks and accessible surfaces', 'Empty room trash', 'Tidy common room areas'];
@@ -19,6 +19,14 @@ const services = [
   {id:'move',name:'Move-in / move-out',category:'Home',desc:'3-4 hrs · Deep sanitation',hours:'3-4 hours',price:1299,included:['Deep sanitation of all rooms','Kitchen and bathroom scrub','Floor mopping and trash removal']}
 ];
 const slots = ['09:00', '11:00', '13:00', '15:00'];
+// Statuses that hold a time slot: once a cleaner is assigned until the job is done.
+const RESERVED = ['confirmed','on_the_way','in_progress','completed'];
+// The only moves a cleaner may make on their own job, one step at a time.
+const CLEANER_NEXT = {confirmed:'on_the_way', on_the_way:'in_progress', in_progress:'completed'};
+const SERVICE_TYPES = ['Dorm','Home'];
+const checklistDone = list => Array.isArray(list) && checklist.every(c=>list.includes(c));
+const optionalText = (v,max) => v===undefined || v==='' || (typeof v==='string' && v.length<=max);
+const validPhotoUrl = v => v===undefined || v==='' || (typeof v==='string' && v.length<=500 && /^https?:\/\/\S+$/.test(v));
 const dateToday = () => new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Manila'});
 export async function createApp(db, adminKey) {
   const app = express();
@@ -29,14 +37,33 @@ export async function createApp(db, adminKey) {
   // One manually assigned cleaner per confirmed slot in this small pilot.
   await bookings.createIndex({date:1,time:1}, {unique:true,partialFilterExpression:{status:'confirmed'}});
   await bookings.createIndex({date:1,time:1}, {name:'reserved_slots',unique:true,partialFilterExpression:{status:{$in:['confirmed','completed']}}});
+  // New name so existing databases get it alongside the older index instead of an options conflict.
+  await bookings.createIndex({date:1,time:1}, {name:'reserved_slots_v2',unique:true,partialFilterExpression:{status:{$in:RESERVED}}});
+  await bookings.createIndex({cleanerId:1,date:1});
+  const users = db.collection('users'), cleaners = db.collection('cleaners');
+  await cleaners.createIndex({id:1}, {unique:true});
+  await cleaners.createIndex({userId:1}, {unique:true});
   const admin = (req,res,next) => req.headers.authorization === `Bearer ${adminKey}` ? next() : res.status(401).json({error:'Enter the correct administrator key.'});
   const requireAuth = (req,res,next) => req.user ? next() : res.status(401).json({error:'Please log in or sign up to book a clean.'});
   const publicBooking = b => {const {_id,token,userId,...safe}=b; return safe;};
+  const publicCleaner = c => {const {_id,...safe}=c; return safe;};
+  // What a cleaner needs for a visit; no account ids, feedback or customer history.
+  const jobView = b => ({id:b.id,date:b.date,time:b.time,status:b.status,service:b.service,serviceId:b.serviceId,size:b.size,addons:b.addons,room:b.room,notes:b.notes,customer:b.name,contact:b.contact,price:b.price,paymentMethod:b.paymentMethod,completedChecklist:b.completedChecklist||[],completedAt:b.completedAt||null});
+  const historyEntry = (status,by) => ({status,by,at:new Date().toISOString()});
+  const assignable = c => c.active && c.screening?.idChecked && c.screening?.backgroundChecked;
+  // Cleaner routes: a logged-in cleaner account with an active profile.
+  const requireCleaner = async(req,res,next)=>{try{
+    if(!req.user)return res.status(401).json({error:'Please log in to see your jobs.'});
+    if(req.user.role!=='cleaner')return res.status(403).json({error:'This page is for Sweep Dreams cleaners.'});
+    req.cleaner=await cleaners.findOne({userId:req.user.id});
+    if(!req.cleaner?.active)return res.status(403).json({error:'Your cleaner account is inactive. Please contact the Sweep Dreams team.'});
+    next();
+  }catch(e){next(e)}};
   app.get('/api/config', (req,res)=>res.json({prices,services,addons:Object.entries(addons).map(([id,a])=>({id,...a})),paymentMethods:payments,slots,checklist,today:dateToday(),demo:process.argv.includes('--demo')}));
   app.get('/api/availability', async(req,res,next)=>{try {
  const {date}=req.query;
  if(typeof date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date||date<=dateToday())return res.status(400).json({error:'Choose a valid future date.'});
- const occupied=await bookings.find({date,status:{$in:['confirmed','completed']}}).project({time:1,_id:0}).toArray();
+ const occupied=await bookings.find({date,status:{$in:RESERVED}}).project({time:1,_id:0}).toArray();
  res.json({date,slots:slots.filter(slot=>!occupied.some(b=>b.time===slot))});
  }catch(e){next(e)}});
   app.post('/api/bookings', requireAuth, async (req,res,next)=> {
@@ -46,9 +73,9 @@ export async function createApp(db, adminKey) {
       const validDate=typeof date==='string' && /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(Date.parse(date)) && new Date(date).toISOString().slice(0,10)===date && date>dateToday();
       const validAddons=Array.isArray(chosen) && new Set(chosen).size===chosen.length && chosen.every(id=>Object.hasOwn(addons,id));
       if (![name,contact,room].every(v=>typeof v==='string' && v.trim().length>=2 && v.length<=100) || !service || (service.sized && !Object.hasOwn(prices,size)) || !slots.includes(time) || !validDate || typeof notes!=='string' || notes.length>500 || !validAddons || !paymentIds.includes(paymentMethod)) return res.status(400).json({error:'Complete all fields and choose a valid date from tomorrow onward.'});
-      if(await bookings.findOne({date,time,status:{$in:['confirmed','completed']}})) return res.status(409).json({error:'This slot is already confirmed. Choose another slot.'});
+      if(await bookings.findOne({date,time,status:{$in:RESERVED}})) return res.status(409).json({error:'This slot is already confirmed. Choose another slot.'});
       const price=(service.sized?prices[size]:service.price)+chosen.reduce((sum,id)=>sum+addons[id].price,0);
-      const b={userId:req.user.id,id:randomBytes(5).toString('hex').toUpperCase(),name:name.trim(),contact:contact.trim(),room:room.trim(),size:service.sized?size:null,date,time,notes:notes.trim(),price,service:service.name,serviceId:service.id,addons:chosen.map(id=>({id,name:addons[id].name,price:addons[id].price})),paymentMethod,status:'pending',cleaner:null,completedChecklist:[],createdAt:new Date().toISOString()};
+      const b={userId:req.user.id,id:randomBytes(5).toString('hex').toUpperCase(),name:name.trim(),contact:contact.trim(),room:room.trim(),size:service.sized?size:null,date,time,notes:notes.trim(),price,service:service.name,serviceId:service.id,addons:chosen.map(id=>({id,name:addons[id].name,price:addons[id].price})),paymentMethod,status:'pending',cleaner:null,cleanerId:null,completedChecklist:[],statusHistory:[historyEntry('pending','customer')],createdAt:new Date().toISOString()};
       await bookings.insertOne(b);
       res.status(201).json(publicBooking(b));
     }catch(e){next(e);}
@@ -61,20 +88,73 @@ export async function createApp(db, adminKey) {
     next();
   }catch(e){next(e)}};
   app.get('/api/bookings/:id',own,(req,res)=>res.json(publicBooking(req.booking)));
-  app.post('/api/bookings/:id/cancel',own,async(req,res,next)=>{try{const r=await bookings.updateOne({id:req.params.id,userId:req.user.id,status:{$in:['pending','confirmed']}},{$set:{status:'cancelled'}});if(!r.modifiedCount)return res.status(409).json({error:'Only pending or confirmed bookings can be cancelled.'});res.json(publicBooking(await bookings.findOne({id:req.params.id})));}catch(e){next(e);}});
+  app.post('/api/bookings/:id/cancel',own,async(req,res,next)=>{try{const r=await bookings.updateOne({id:req.params.id,userId:req.user.id,status:{$in:['pending','confirmed']}},{$set:{status:'cancelled'},$push:{statusHistory:historyEntry('cancelled','customer')}});if(!r.modifiedCount)return res.status(409).json({error:'Only pending or confirmed bookings can be cancelled.'});res.json(publicBooking(await bookings.findOne({id:req.params.id})));}catch(e){next(e);}});
   app.post('/api/bookings/:id/feedback',own,async(req,res,next)=>{try{const {rating,comment=''}=req.body;if(!Number.isInteger(rating)||rating<1||rating>5||typeof comment!=='string'||comment.length>500)return res.status(400).json({error:'Choose a rating from 1 to 5; comments have a 500-character limit.'});const r=await bookings.updateOne({id:req.params.id,userId:req.user.id,status:'completed',feedback:{$exists:false}},{$set:{feedback:{rating,comment:comment.trim(),createdAt:new Date().toISOString()}}});if(!r.modifiedCount)return res.status(409).json({error:'Feedback is available once, after completion.'});res.json(publicBooking(await bookings.findOne({id:req.params.id})));}catch(e){next(e);}});
   app.get('/api/admin/bookings',admin,async(req,res,next)=>{try{res.json((await bookings.find().sort({createdAt:-1}).toArray()).map(publicBooking));}catch(e){next(e);}});
   app.patch('/api/admin/bookings/:id',admin,async(req,res,next)=>{try{
     const b=await bookings.findOne({id:req.params.id});if(!b)return res.status(404).json({error:'Booking not found.'});
-    const {status,cleaner,completedChecklist=[]}=req.body;
-    const allowed={pending:['confirmed','cancelled'],confirmed:['completed','cancelled'],completed:[],cancelled:[]};
-    if(!allowed[b.status].includes(status))return res.status(409).json({error:'Invalid booking status change.'});
+    const {status,cleanerId,completedChecklist=[]}=req.body;
+    // The admin assigns and can override: finish or cancel a job at any active stage.
+    const allowed={pending:['confirmed','cancelled'],confirmed:['completed','cancelled'],on_the_way:['completed','cancelled'],in_progress:['completed','cancelled'],completed:[],cancelled:[]};
+    if(!allowed[b.status]?.includes(status))return res.status(409).json({error:'Invalid booking status change.'});
     const update={status};
-    if(status==='confirmed'){if(typeof cleaner!=='string'||cleaner.trim().length<2||cleaner.length>100)return res.status(400).json({error:'Enter a cleaner name after manually checking their ID and background.'});update.cleaner=cleaner.trim();}
-    if(status==='completed'){if(!Array.isArray(completedChecklist)||checklist.some(c=>!completedChecklist.includes(c)))return res.status(400).json({error:'Complete all cleaning checklist items first.'});update.completedChecklist=checklist;update.completedAt=new Date().toISOString();}
-    const r=await bookings.updateOne({id:b.id,status:b.status},{$set:update});if(!r.modifiedCount)return res.status(409).json({error:'Booking changed. Refresh and try again.'});
+    if(status==='confirmed'){
+      const c=typeof cleanerId==='string'?await cleaners.findOne({id:cleanerId}):null;
+      if(!c||!assignable(c))return res.status(400).json({error:'Choose an active cleaner whose ID and background checks are done.'});
+      Object.assign(update,{cleanerId:c.id,cleaner:c.name,cleanerPhotoUrl:c.photoUrl||null});
+    }
+    if(status==='completed'){if(!checklistDone(completedChecklist))return res.status(400).json({error:'Complete all cleaning checklist items first.'});update.completedChecklist=checklist;update.completedAt=new Date().toISOString();}
+    const r=await bookings.updateOne({id:b.id,status:b.status},{$set:update,$push:{statusHistory:historyEntry(status,'admin')}});if(!r.modifiedCount)return res.status(409).json({error:'Booking changed. Refresh and try again.'});
     res.json(publicBooking(await bookings.findOne({id:b.id})));
   }catch(e){if(e.code===11000)return res.status(409).json({error:'Another booking is confirmed for this slot.'});next(e);}});
+
+  // Cleaner accounts: created by the admin only (public sign-up always makes customers).
+  app.get('/api/admin/cleaners',admin,async(req,res,next)=>{try{
+    const list=await cleaners.find().sort({createdAt:-1}).toArray();
+    const emails=new Map((await users.find({id:{$in:list.map(c=>c.userId)}}).toArray()).map(u=>[u.id,u.email]));
+    res.json(list.map(c=>({...publicCleaner(c),email:emails.get(c.userId)||null})));
+  }catch(e){next(e)}});
+  app.post('/api/admin/cleaners',admin,async(req,res,next)=>{try{
+    const {name,email,password,phone='',photoUrl='',bio='',serviceTypes=SERVICE_TYPES,idChecked=false,backgroundChecked=false}=req.body||{};
+    if(typeof name!=='string'||name.trim().length<2||name.length>100||!validEmail(email)||!validPassword(password)||!optionalText(phone,40)||!optionalText(bio,300)||!validPhotoUrl(photoUrl)||!Array.isArray(serviceTypes)||!serviceTypes.length||!serviceTypes.every(t=>SERVICE_TYPES.includes(t))||typeof idChecked!=='boolean'||typeof backgroundChecked!=='boolean')
+      return res.status(400).json({error:'Enter a name, a valid email, a temporary password of 8–128 characters, and at least one service type. Photo links must start with http:// or https://.'});
+    const now=new Date();
+    const user={id:randomBytes(16).toString('hex'),name:name.trim(),email:email.trim().toLowerCase(),role:'cleaner',...await hashPassword(password),createdAt:now};
+    await users.insertOne(user);
+    const screened=idChecked||backgroundChecked;
+    const c={id:randomBytes(5).toString('hex').toUpperCase(),userId:user.id,name:user.name,phone:phone.trim(),photoUrl:photoUrl.trim(),bio:bio.trim(),serviceTypes:[...new Set(serviceTypes)],screening:{idChecked,backgroundChecked,checkedAt:screened?now.toISOString():null},active:true,createdAt:now.toISOString()};
+    try{await cleaners.insertOne(c);}catch(e){await users.deleteOne({id:user.id});throw e;}
+    res.status(201).json({...publicCleaner(c),email:user.email});
+  }catch(e){if(e.code===11000)return res.status(409).json({error:'An account already uses this email.'});next(e)}});
+  app.patch('/api/admin/cleaners/:id',admin,async(req,res,next)=>{try{
+    const c=await cleaners.findOne({id:req.params.id});if(!c)return res.status(404).json({error:'Cleaner not found.'});
+    const {active,idChecked,backgroundChecked}=req.body||{};
+    if([active,idChecked,backgroundChecked].some(v=>v!==undefined&&typeof v!=='boolean'))return res.status(400).json({error:'Invalid cleaner update.'});
+    const set={};
+    if(active!==undefined)set.active=active;
+    if(idChecked!==undefined)set['screening.idChecked']=idChecked;
+    if(backgroundChecked!==undefined)set['screening.backgroundChecked']=backgroundChecked;
+    if(idChecked!==undefined||backgroundChecked!==undefined)set['screening.checkedAt']=new Date().toISOString();
+    if(Object.keys(set).length)await cleaners.updateOne({id:c.id},{$set:set});
+    const updated=await cleaners.findOne({id:c.id});const u=await users.findOne({id:c.userId});
+    res.json({...publicCleaner(updated),email:u?.email||null});
+  }catch(e){next(e)}});
+
+  // Cleaner portal: a cleaner sees and updates only the jobs assigned to them.
+  app.get('/api/cleaner/jobs',requireCleaner,async(req,res,next)=>{try{
+    const jobs=await bookings.find({cleanerId:req.cleaner.id,status:{$in:RESERVED}}).sort({date:1,time:1}).toArray();
+    res.json({cleaner:publicCleaner(req.cleaner),jobs:jobs.map(jobView),today:dateToday()});
+  }catch(e){next(e)}});
+  app.patch('/api/cleaner/jobs/:id',requireCleaner,async(req,res,next)=>{try{
+    const b=await bookings.findOne({id:req.params.id,cleanerId:req.cleaner.id});if(!b)return res.status(404).json({error:'Job not found.'});
+    const {status,completedChecklist=[]}=req.body||{};
+    if(!CLEANER_NEXT[b.status]||CLEANER_NEXT[b.status]!==status)return res.status(409).json({error:'This job has already moved on. Refresh your jobs and try again.'});
+    const update={status};
+    if(status==='completed'){if(!checklistDone(completedChecklist))return res.status(400).json({error:'Tick every checklist item before marking the job complete.'});update.completedChecklist=checklist;update.completedAt=new Date().toISOString();}
+    const r=await bookings.updateOne({id:b.id,cleanerId:req.cleaner.id,status:b.status},{$set:update,$push:{statusHistory:historyEntry(status,'cleaner')}});
+    if(!r.modifiedCount)return res.status(409).json({error:'This job has already moved on. Refresh your jobs and try again.'});
+    res.json(jobView(await bookings.findOne({id:b.id})));
+  }catch(e){next(e)}});
   app.use((err,req,res,next)=>{console.error(err.message);res.status(err.status===400?400:500).json({error:err.status===400?'Invalid JSON request.':'Unable to save changes. Please try again.'});});
   return app;
 }
