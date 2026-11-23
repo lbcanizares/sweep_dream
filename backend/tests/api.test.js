@@ -34,6 +34,10 @@ test('MERN booking lifecycle, login requirement, ownership, validation, and slot
     // Validation (logged in).
     assert.equal((await request('/bookings','POST',{...input,date:'2026-02-30'},{Cookie:cookie})).status,400);
     assert.equal((await request('/bookings','POST',{...input,size:'mansion'},{Cookie:cookie})).status,400);
+    // Card payment is listed as coming soon and cannot be chosen yet.
+    const card=(await request('/config')).data.paymentMethods.find(p=>p.id==='card');
+    assert.equal(card.available,false);
+    assert.equal((await request('/bookings','POST',{...input,paymentMethod:'card'},{Cookie:cookie})).status,400);
 
     // Booking belongs to the logged-in account.
     const signed=await request('/bookings','POST',{...input,time:'11:00'},{Cookie:cookie});assert.equal(signed.status,201);

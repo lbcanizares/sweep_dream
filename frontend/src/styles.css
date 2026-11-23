@@ -246,6 +246,9 @@ legend{font-size:14px;font-weight:600;padding:0 6px}
 .option input{width:18px;height:18px;min-height:0;margin:0;accent-color:var(--navy)}
 .option span{flex:1;display:grid;gap:2px}.option strong{font-size:16px}.option small{color:var(--muted);font-size:14px}
 .option b{color:var(--navy);font-size:22px;font-variant-numeric:tabular-nums}
+.option.disabled{cursor:not-allowed;opacity:.6;background:var(--raised)}
+.option.disabled:hover{border-color:var(--border);transform:none;box-shadow:none}
+.soon-tag{flex:none;padding:3px 10px;border-radius:var(--r-pill);background:var(--warn-bg);color:var(--warn-ink);font-size:12px;font-style:normal;font-weight:600;white-space:nowrap}
 .field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}
 .field-grid .calendar{grid-column:1 / -1}
 .availability-note{grid-column:1 / -1;padding:10px 14px;border-radius:10px;background:var(--navy-wash);color:var(--navy);font-size:14px}
@@ -274,6 +277,10 @@ legend{font-size:14px;font-weight:600;padding:0 6px}
 .bookings-page{display:grid;gap:16px;max-width:880px}
 .bookings-page .page-head{margin-bottom:8px}
 .account-list{padding:12px}
+.booking-tabs{display:flex;gap:6px;margin:0 0 10px;padding:4px;border-radius:var(--r-pill);background:var(--raised);width:max-content;max-width:100%}
+.booking-tabs button{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:6px 18px;border:0;border-radius:var(--r-pill);background:none;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer}
+.booking-tabs button[aria-selected="true"]{background:var(--navy);color:#fff}
+.tab-count{min-width:22px;padding:1px 7px;border-radius:var(--r-pill);background:var(--surface);color:var(--text);font-size:12px;text-align:center}
 .lookup{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) auto;gap:16px;align-items:end}
 .lookup label{margin:0}
 .booking-detail{display:grid;gap:4px}
