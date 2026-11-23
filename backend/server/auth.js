@@ -2,7 +2,11 @@ import {randomBytes,scrypt as derive,timingSafeEqual,createHash} from 'node:cryp
 import {promisify} from 'node:util';
 const scrypt=promisify(derive);
 const digest=token=>createHash('sha256').update(token).digest('hex');
-const safe=user=>({id:user.id,name:user.name,email:user.email});
+// Accounts made through public sign-up are customers; only the admin can create cleaner accounts.
+const safe=user=>({id:user.id,name:user.name,email:user.email,role:user.role||'customer'});
+export const validEmail=email=>typeof email==='string'&&email.length<=254&&/^\S+@\S+\.\S+$/.test(email.trim());
+export const validPassword=password=>typeof password==='string'&&password.length>=8&&password.length<=128;
+export async function hashPassword(password){const salt=randomBytes(16).toString('hex');return {salt,passwordHash:(await scrypt(password,salt,64)).toString('hex')};}
 export async function installAuth(app,db) {
  const users=db.collection('users'),sessions=db.collection('sessions');
  await users.createIndex({email:1},{unique:true});
@@ -22,9 +26,8 @@ export async function installAuth(app,db) {
  app.get('/api/auth/me',(req,res)=>res.json({user:req.user?safe(req.user):null}));
  app.post('/api/auth/signup',limit,async(req,res,next)=>{try {
   const {name,email,password}=req.body||{};
-  if(typeof name!=='string'||name.trim().length<2||name.length>100||typeof email!=='string'||email.length>254||!/^\S+@\S+\.\S+$/.test(email.trim())||typeof password!=='string'||password.length<8||password.length>128)return res.status(400).json({error:'Enter your name, a valid email, and a password of 8–128 characters.'});
-  const salt=randomBytes(16).toString('hex');const passwordHash=(await scrypt(password,salt,64)).toString('hex');
-  const user={id:randomBytes(16).toString('hex'),name:name.trim(),email:email.trim().toLowerCase(),salt,passwordHash,createdAt:new Date()};
+  if(typeof name!=='string'||name.trim().length<2||name.length>100||!validEmail(email)||!validPassword(password))return res.status(400).json({error:'Enter your name, a valid email, and a password of 8–128 characters.'});
+  const user={id:randomBytes(16).toString('hex'),name:name.trim(),email:email.trim().toLowerCase(),role:'customer',...await hashPassword(password),createdAt:new Date()};
   await users.insertOne(user);res.status(201).json({user:await session(req,res,user)});
  }catch(e){if(e.code===11000)return res.status(409).json({error:'This email already has an account. Please log in.'});next(e)}});
  app.post('/api/auth/login',limit,async(req,res,next)=>{try {

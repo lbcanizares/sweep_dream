@@ -2,9 +2,9 @@ import React from 'react';
 import NavIcon from './NavIcon.jsx';
 import {pesos} from './api.js';
 import {PromoBanner,ServiceCatalog} from './Services.jsx';
-import {Sk,StatusPill,fmtDate,pesosFrom} from './ui.jsx';
+import {ACTIVE_STATUSES,Sk,StatusPill,fmtDate,pesosFrom} from './ui.jsx';
 
-const upcoming=(rows,today)=>rows.filter(b=>['pending','confirmed'].includes(b.status)&&b.date>=today).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time))[0];
+const upcoming=(rows,today)=>rows.filter(b=>ACTIVE_STATUSES.includes(b.status)&&b.date>=today).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time))[0];
 
 function BookingsPanel({bookings,config,go,open}){
  const next=upcoming(bookings,config.today),rest=bookings.filter(b=>b!==next).slice(0,next?3:4);

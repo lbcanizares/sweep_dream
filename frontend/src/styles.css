@@ -95,6 +95,7 @@ button:disabled{cursor:not-allowed;opacity:.55}
 .backdrop{display:none}
 
 .avatar{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:50%;background:var(--navy);color:#fff;font-size:13px;font-weight:700;letter-spacing:.02em}
+.avatar.photo{object-fit:cover;background:var(--raised)}.avatar.lg{width:56px;height:56px;font-size:18px}
 .account{position:relative}
 .account-toggle{display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border:1px solid transparent;border-radius:var(--r-pill);background:none;cursor:pointer;color:var(--text);font-weight:600;font-size:14px}
 .account-toggle:hover,.account-toggle[aria-expanded="true"]{background:var(--raised);border-color:var(--border)}
@@ -132,6 +133,7 @@ button:disabled{cursor:not-allowed;opacity:.55}
 .status{display:inline-flex;align-items:center;flex:none;white-space:nowrap;padding:3px 10px;border-radius:var(--r-pill);font-size:12px;font-weight:600;background:var(--warn-bg);color:var(--warn-ink)}
 .status.confirmed,.status.completed{background:var(--pos-bg);color:var(--pos-ink)}
 .status.cancelled{background:var(--raised);color:var(--muted)}
+.status.on_the_way,.status.in_progress{background:var(--navy-tint);color:var(--navy)}
 .actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:24px}
 .actions.start{justify-content:flex-start}
 .page-head .actions{margin-top:0}
@@ -285,11 +287,11 @@ legend{font-size:14px;font-weight:600;padding:0 6px}
 .lookup label{margin:0}
 .booking-detail{display:grid;gap:4px}
 .confirmation-mark{display:grid;place-items:center;width:72px;height:72px;margin:4px auto 8px;border-radius:50%;background:var(--warn-bg);color:var(--warn-ink);font-size:36px}
-.confirmation-mark.confirmed,.confirmation-mark.completed{background:var(--pos-bg);color:var(--pos-ink)}
+.confirmation-mark.confirmed,.confirmation-mark.on_the_way,.confirmation-mark.in_progress,.confirmation-mark.completed{background:var(--pos-bg);color:var(--pos-ink)}
 .confirmation-mark.cancelled{background:var(--raised);color:var(--muted)}
 .confirmation-title{text-align:center;font-size:22px;margin-bottom:12px}
 .booking-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px}
-.booking-timeline{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;list-style:none;margin:12px 0;padding:0}
+.booking-timeline{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;list-style:none;margin:12px 0;padding:0}
 .booking-timeline li{display:flex;gap:10px;align-items:flex-start;color:var(--faint);font-size:14px}
 .booking-timeline li>span{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:50%;border:1px solid var(--control);font-size:12px}
 .booking-timeline .reached{color:var(--text)}.booking-timeline .reached>span{background:var(--navy);border-color:var(--navy);color:#fff}
@@ -315,12 +317,43 @@ code{display:block;margin-top:8px;padding:12px;border-radius:10px;background:var
 .auth-switch{text-align:center;font-size:14px;margin:20px 0 0}
 .admin-login{max-width:460px;margin:24px auto}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:0;margin-bottom:16px}
+.admin-tabs{margin-bottom:16px;background:var(--surface);border:1px solid var(--border)}
+.admin-cleaners{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
+.admin-cleaners h2{font-size:20px}
+.cleaner-list{list-style:none;margin:12px 0 0;padding:0}
+.cleaner-row{display:grid;gap:10px;padding:14px 0;border-top:1px solid var(--rule)}
+.cleaner-who{display:flex;align-items:center;gap:12px;min-width:0}.cleaner-who>div{min-width:0}
+.cleaner-who small{display:block;color:var(--muted);font-size:13px}
+.cleaner-actions{display:flex;flex-wrap:wrap;gap:8px}
+.secondary.is-on{background:var(--pos-bg);border-color:var(--pos-bg);color:var(--pos-ink)}
+.field-grid .wide,.summary .wide{grid-column:1 / -1}
+label .fine{display:block;margin-top:6px;font-weight:400}
+
+/* ---------- Cleaner portal ---------- */
+.cleaner-page{display:grid;gap:16px;max-width:880px}
+.cleaner-page .page-head{margin-bottom:8px}
+.cleaner-profile{display:flex;align-items:center;gap:14px;padding:16px 20px}
+.cleaner-profile>div{flex:1;min-width:0}.cleaner-profile strong,.cleaner-profile small{display:block}.cleaner-profile small{color:var(--muted);font-size:14px}
+.job-list{display:grid;gap:12px}
+.job-card{padding:20px}
+.job-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.job-head strong{font-size:17px;font-weight:600}
+.today-tag{margin-left:8px;padding:2px 8px;border-radius:var(--r-pill);background:var(--yellow);color:var(--yellow-ink);font-size:12px;font-weight:700;vertical-align:2px}
+.job-service{margin-top:4px;color:var(--muted);font-size:14px}
+.job-progress{display:flex;gap:6px;list-style:none;margin:14px 0 0;padding:0}
+.job-progress li{flex:1;min-width:0;padding-top:8px;border-top:3px solid var(--rule);color:var(--faint);font-size:12px;font-weight:600}
+.job-progress li.reached{border-color:var(--navy);color:var(--text)}
+.job-summary{margin:14px 0 0}
+.job-card .actions{align-items:center;margin-top:16px}
+.row-static{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:10px 8px}
+.row-static>span:first-child{display:grid;gap:2px;min-width:0}
 .stats div{display:grid;gap:4px;padding:18px 20px}.stats div+div{border-left:1px solid var(--border)}
 .stats small{color:var(--muted);font-size:14px}.stats strong{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
 .admin-booking{margin-bottom:12px;font-size:15px}.admin-booking p{margin-top:6px}
 
 /* ---------- Responsive ---------- */
 @media (max-width:1099px){
+ .admin-cleaners{grid-template-columns:minmax(0,1fr)}
  .dashboard,.landing-hero{grid-template-columns:minmax(0,1fr)}
  .dash-main,.dash-aside{display:contents}
  .dash-head{order:1}.dash-aside>:first-child{order:2}.catalog{order:3}.bookings-panel{order:4}
@@ -362,6 +395,8 @@ code{display:block;margin-top:8px;padding:12px;border-radius:10px;background:var
  .booking-timeline{grid-template-columns:minmax(0,1fr)}
  .actions .primary,.actions .secondary{flex:1}
  .auth-layout{grid-template-columns:minmax(0,1fr);margin:0 auto;max-width:460px}.auth-intro{display:none}
+ .cleaner-profile{flex-wrap:wrap;padding:16px}
+ .job-card{padding:16px}
  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stats div:nth-child(3){border-left:0}.stats div:nth-child(n+3){border-top:1px solid var(--border)}
  .site-foot{font-size:12px}
 }

@@ -11,11 +11,16 @@ function AccountMenu({user,go,logout,busy}){
  if(!user)return <Sk w={40} h={40} r={999}/>;
  const pick=id=>e=>{e.preventDefault();setOpen(false);go(id)};
  return <div className="account" ref={ref}><button className="account-toggle" aria-haspopup="menu" aria-expanded={open} onClick={()=>setOpen(!open)}><span className="avatar" aria-hidden="true">{initials(user.name)}</span><span className="account-name">{user.name.split(' ')[0]}</span><NavIcon name="chevron" size={16}/><span className="sr-only">Account menu</span></button>
-  {open&&<div className="account-menu" role="menu"><div className="account-who"><strong>{user.name}</strong><small>{user.email}</small></div><a role="menuitem" href="#bookings" onClick={pick('bookings')}>My bookings</a><a role="menuitem" href="#book" onClick={pick('book')}>Book a clean</a><Button role="menuitem" className="menu-danger" busy={busy} onClick={logout}>Log out</Button></div>}
+  {open&&<div className="account-menu" role="menu"><div className="account-who"><strong>{user.name}</strong><small>{user.email}</small></div>{menuFor(user).map(([id,label])=><a key={id} role="menuitem" href={'#'+id} onClick={pick(id)}>{label}</a>)}<Button role="menuitem" className="menu-danger" busy={busy} onClick={logout}>Log out</Button></div>}
  </div>;
 }
 
 const appNav=[['dashboard','Home','home'],['book','Book a clean','book'],['bookings','My bookings','track']];
+const cleanerNav=[['cleaner','My jobs','track']];
+// Cleaners and customers share the login and the shell, but each sees only their own pages.
+export const homeFor=user=>user?.role==='cleaner'?'cleaner':'dashboard';
+const navFor=user=>user?.role==='cleaner'?cleanerNav:appNav;
+const menuFor=user=>user?.role==='cleaner'?[['cleaner','My jobs']]:[['bookings','My bookings'],['book','Book a clean']];
 
 // Authenticated shell: fixed top bar, persistent 250px sidebar on desktop/tablet, off-canvas drawer below 768px.
 export function ProtectedLayout({tab,go,user,logout,loggingOut,children}){
@@ -26,13 +31,13 @@ export function ProtectedLayout({tab,go,user,logout,loggingOut,children}){
  return <div className={'shell shell-app'+(open?' drawer-open':'')}>
   <header className="topbar">
    <button ref={toggle} className="icon-button menu-toggle" aria-label="Open menu" aria-expanded={open} aria-controls="app-sidebar" onClick={()=>setOpen(true)}><NavIcon name="menu"/></button>
-   <Brand go={go} to="dashboard"/>
+   <Brand go={go} to={homeFor(user)}/>
    <AccountMenu user={user} go={go} logout={logout} busy={loggingOut}/>
   </header>
   <div className="backdrop" onClick={()=>setOpen(false)} aria-hidden="true"/>
   <aside id="app-sidebar" ref={drawer} className="sidebar" aria-label="Main navigation">
-   <div className="drawer-head"><Brand go={go} to="dashboard"/><button className="icon-button" aria-label="Close menu" onClick={()=>setOpen(false)}><NavIcon name="close"/></button></div>
-   <nav>{appNav.map(([id,label,icon])=><a key={id} href={'#'+id} className={'side-link'+(active===id?' active':'')} aria-current={active===id?'page':undefined} onClick={link(go,id)}><NavIcon name={icon} size={20}/><span>{label}</span></a>)}</nav>
+   <div className="drawer-head"><Brand go={go} to={homeFor(user)}/><button className="icon-button" aria-label="Close menu" onClick={()=>setOpen(false)}><NavIcon name="close"/></button></div>
+   <nav>{navFor(user).map(([id,label,icon])=><a key={id} href={'#'+id} className={'side-link'+(active===id?' active':'')} aria-current={active===id?'page':undefined} onClick={link(go,id)}><NavIcon name={icon} size={20}/><span>{label}</span></a>)}</nav>
    <div className="sidebar-foot">{user&&<div className="side-user"><span className="avatar" aria-hidden="true">{initials(user.name)}</span><span><strong>{user.name}</strong><small>{user.email}</small></span></div>}<Button className="side-link side-logout" busy={loggingOut} onClick={logout}><NavIcon name="logout" size={20}/>Log out</Button></div>
   </aside>
   <main id="main-content" className="content" tabIndex={-1}>{children}</main>
