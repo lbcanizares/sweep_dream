@@ -6,8 +6,8 @@ export default function ServiceView({config,serviceId,go,user,setStep}){
  const s=config.services.find(x=>x.id===serviceId)||config.services[0];
  return <section className="page detail-page">
   <button className="back-link" onClick={()=>go(user?'dashboard':'home')}><NavIcon name="back" size={18}/>Back</button>
-  <div className="detail-grid"><div className="detail-art" aria-hidden="true"><NavIcon name={s.category==='Home'?'house':'window'} size={150} stroke={1}/></div>
-   <div className="panel detail-copy"><h1>{s.name}</h1><p className="lead">{s.desc}</p><p className="detail-price">{pesos(servicePrice(config,s))}<small> {fromLabel(s)?'from · ':''}{s.hours}</small></p>
+  <div className="detail-grid">{s.image?<figure className="detail-art detail-photo"><img src={s.image} alt={s.imageAlt||''}/></figure>:<div className="detail-art" aria-hidden="true"><NavIcon name={s.category==='Home'?'house':'window'} size={150} stroke={1}/></div>}
+   <div className="panel detail-copy"><h1>{s.name}</h1><p className="lead">{s.desc}</p><p className="detail-price">{fromLabel(s)&&<small>from </small>}{pesos(servicePrice(config,s))}<small> · {s.hours}</small></p>
     <h2>What's included</h2><ul className="included">{(s.included||config.checklist).map(c=><li key={c}><span aria-hidden="true">✓</span>{c}</li>)}</ul>
     {s.sized&&<div className="callout"><strong>Simple pricing</strong><p>Small dorm up to 15 m²: {pesos(config.prices.small)}. Standard dorm 16–25 m²: {pesos(config.prices.standard)}.</p></div>}
     {s.extras?.length>0&&<div className="callout"><strong>Bigger unit?</strong><p>{s.extras.map(x=>x.label+': +'+pesos(x.price)+' each (up to '+x.max+')').join(' · ')}. Choose them when you book.</p></div>}
