@@ -24,7 +24,7 @@ export function ServiceCatalog({config,choose,search='',setSearch,title='Service
  const q=search.trim().toLowerCase(),list=config.services.filter(s=>(shown==='All'||s.category===shown)&&s.name.toLowerCase().includes(q));
  return <section className="catalog" aria-labelledby="catalog-title"><div className="catalog-head"><h2 id="catalog-title">{title}</h2><FilterPills options={options} value={category} onChange={setCategory}/></div>
   <div className={'service-list'+(fading?' is-fading':'')} aria-live="polite">{list.map(s=><button key={s.id} type="button" className="service-card" onClick={()=>choose(s.id)}>
-   <span className="service-icon" aria-hidden="true"><NavIcon name={icons[s.category]||'window'} size={24} stroke={1.6}/></span>
+   {s.thumb?<img className="service-thumb" src={s.thumb} alt="" width="64" height="64" loading="lazy"/>:<span className="service-icon" aria-hidden="true"><NavIcon name={icons[s.category]||'window'} size={24} stroke={1.6}/></span>}
    <span className="service-copy"><strong>{s.name}</strong><small>{s.desc}</small></span>
    <span className="service-price">{fromLabel(s)&&<small>from</small>}{pesos(servicePrice(config,s))}</span>
    <span className="service-arrow" aria-hidden="true"><NavIcon name="arrow" size={20}/></span>
