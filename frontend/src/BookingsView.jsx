@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {pesos} from './api.js';
 import {googleCalendarUrl} from './calendar.js';
+import {MapView,mapLink} from './maps.jsx';
 import {ACTIVE_STATUSES,Button,Sk,Spinner,StatusPill,extrasText,fmtDate,paymentName} from './ui.jsx';
 const titles={confirmed:'Booking confirmed',on_the_way:'Your cleaner is on the way',in_progress:'Cleaning in progress',completed:'Your room, refreshed',cancelled:'Booking cancelled',pending:'Request received'};
 const notes={pending:'Your request is saved. The team will contact you using your supplied details after checking the schedule.',confirmed:'Your cleaner and requested schedule have been confirmed by the pilot team.',on_the_way:'Your cleaner has set off. Please make sure they can get into your building.',in_progress:'Your cleaner has started. They will mark the job complete when the checklist is done.',completed:'Cleaning marked complete. Tell us how it went.',cancelled:'This booking is cancelled. If you added it to your calendar, remember to delete it there.'};
@@ -36,6 +37,7 @@ export default function BookingsView({config,accountBookings,booking,load,cancel
  {shown&&<article className="panel booking-detail"><div className={'confirmation-mark '+booking.status} aria-hidden="true">{booking.status==='cancelled'?'×':booking.status==='pending'?'◷':'✓'}</div><h2 className="confirmation-title">{titles[booking.status]}</h2>
   <div className="booking-heading"><h3>Booking #{booking.id}</h3><StatusPill status={booking.status}/></div>
   <dl className="summary"><div><dt>Schedule</dt><dd>{booking.date} · {booking.time} (PH)</dd></div><div><dt>Location</dt><dd>{booking.room}</dd></div><div><dt>Service / price</dt><dd>{booking.service} · {pesos(booking.price)}</dd></div>{booking.extras?.length>0&&<div><dt>Extra areas</dt><dd>{extrasText(booking)}</dd></div>}{booking.addons?.length>0&&<div><dt>Add-ons</dt><dd>{booking.addons.map(a=>a.name).join(', ')}</dd></div>}<div><dt>Payment</dt><dd>{paymentName(config,booking.paymentMethod)}</dd></div><div><dt>Assigned cleaner</dt><dd>{booking.cleaner||'Awaiting manual assignment'}</dd></div></dl>
+  {booking.location&&<div className="booking-map"><MapView area={config.serviceArea} location={booking.location} label={'Your pin for '+booking.room}/><a className="text-link" href={mapLink(booking.location)} target="_blank" rel="noopener noreferrer">Open in Google Maps</a></div>}
   <ol className="booking-timeline" aria-label="Booking progress">{steps.map(([state,label],i)=>{const index=steps.findIndex(([s])=>s===booking.status);return <li key={state} className={index>=i?'reached':''}><span aria-hidden="true">{index>=i?'✓':''}</span><div><strong>{label}</strong>{state===booking.status&&<small>Current status</small>}</div></li>})}</ol>
   {booking.cleaner&&<div className="cleaner-card">{booking.cleanerPhotoUrl?<img className="avatar photo" src={booking.cleanerPhotoUrl} alt=""/>:<span className="avatar" aria-hidden="true">{booking.cleaner[0]}</span>}<div><strong>{booking.cleaner}</strong><small>Your assigned cleaner</small></div></div>}
   <p className="muted">{notes[booking.status]}</p>

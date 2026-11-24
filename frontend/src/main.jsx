@@ -28,7 +28,7 @@ function App(){
   const [busyKey,setBusyKey]=useState(''),[navigating,setNavigating]=useState(true);
   const [user,setUser]=useState(null),[authReady,setAuthReady]=useState(false),[accountBookings,setAccountBookings]=useState(null);
   const [availability,setAvailability]=useState(null),[search,setSearch]=useState('');
-  const [step,setStep]=useState(1),[form,setForm]=useState({serviceId:'basic',size:'small',addons:[],extras:{},paymentMethod:'cash',date:'',time:'09:00',name:'',contact:'',room:'',notes:''});
+  const [step,setStep]=useState(1),[form,setForm]=useState({serviceId:'basic',size:'small',addons:[],extras:{},paymentMethod:'cash',date:'',time:'09:00',name:'',contact:'',room:'',notes:'',location:null});
   const [booking,setBooking]=useState(null);
   const [adminKey,setAdminKey]=useState(''),[rows,setRows]=useState([]),[staffCleaners,setStaffCleaners]=useState([]);
   const [cleanerData,setCleanerData]=useState(null);

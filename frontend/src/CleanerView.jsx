@@ -1,5 +1,6 @@
 import React,{useState} from 'react';
 import {pesos} from './api.js';
+import {MapView,directionsLink} from './maps.jsx';
 import {Button,StatusPill,checklistFor,extrasText,fmtDate,initials,paymentName} from './ui.jsx';
 
 // The one next step a cleaner can take on a job, in order.
@@ -27,6 +28,7 @@ function JobCard({job,config,today,busyKey,advance}){
    <div><dt>Payment</dt><dd>{job.paymentMethod==='cash'?'Collect '+pesos(job.price)+' in cash':paymentName(config,job.paymentMethod)+' · arranged by the team'}</dd></div>
    {job.notes&&<div className="wide"><dt>Customer notes</dt><dd>{job.notes}</dd></div>}
   </dl>
+  {job.location&&<div className="job-map"><MapView area={config.serviceArea} location={job.location} label={'Map pin for '+job.room}/><a className="secondary small" href={directionsLink(job.location)} target="_blank" rel="noopener noreferrer">Get directions</a></div>}
   {needsChecklist&&<fieldset><legend>Before you finish, tick every item</legend>{items.map(c=><label className="check" key={c}><input type="checkbox" checked={checks.includes(c)} onChange={e=>toggle(c,e.target.checked)}/>{c}</label>)}</fieldset>}
   {status&&<div className="actions start"><Button busy={busyKey===job.id+status} disabled={!!busyKey||(needsChecklist&&!allChecked)} onClick={()=>advance(job,status,needsChecklist?checks:undefined)}>{label}</Button>{needsChecklist&&!allChecked&&<span className="fine">Tick all {items.length} items to finish.</span>}</div>}
  </article>;

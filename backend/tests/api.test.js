@@ -13,7 +13,8 @@ test('MERN booking lifecycle, login requirement, ownership, validation, and slot
   const request=async(path,method='GET',body,headers={})=>{const r=await fetch(base+path,{method,headers:{'Content-Type':'application/json',...headers},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json()};};
   const admin={Authorization:'Bearer test-key'};
   const date=new Date(Date.now()+3*86400000).toISOString().slice(0,10);
-  const input={name:'Dwight Demo',contact:'demo@example.test',room:'Demo Dorm 204',size:'small',date,time:'09:00'};
+  const naga={lat:13.6234567891,lng:123.1876543219};
+  const input={name:'Dwight Demo',contact:'demo@example.test',room:'Demo Dorm 204',size:'small',date,time:'09:00',location:naga};
   try{
     // Admin routes stay protected.
     assert.equal((await request('/admin/bookings')).status,401);
@@ -34,6 +35,11 @@ test('MERN booking lifecycle, login requirement, ownership, validation, and slot
     // Validation (logged in).
     assert.equal((await request('/bookings','POST',{...input,date:'2026-02-30'},{Cookie:cookie})).status,400);
     assert.equal((await request('/bookings','POST',{...input,serviceId:'mansion'},{Cookie:cookie})).status,400);
+    // A map pin inside Naga City is required.
+    for(const location of [undefined,null,{lat:14.5995,lng:120.9842},{lat:'13.62',lng:123.19},{lat:13.62},[13.62,123.19]]){
+      const r=await request('/bookings','POST',{...input,location},{Cookie:cookie});
+      assert.equal(r.status,400,JSON.stringify(location));assert.match(r.data.error,/Naga City/);
+    }
     // Card payment is listed as coming soon and cannot be chosen yet.
     const card=(await request('/config')).data.paymentMethods.find(p=>p.id==='card');
     assert.equal(card.available,false);
@@ -41,6 +47,7 @@ test('MERN booking lifecycle, login requirement, ownership, validation, and slot
 
     // Booking belongs to the logged-in account.
     const signed=await request('/bookings','POST',{...input,time:'11:00'},{Cookie:cookie});assert.equal(signed.status,201);
+    assert.deepEqual(signed.data.location,{lat:13.623457,lng:123.187654});
     assert.equal(signed.data.token,undefined);assert.equal(signed.data.userId,undefined);
     assert.equal((await request('/account/bookings','GET',undefined,{Cookie:cookie})).data.length,1);
     assert.equal((await request('/bookings/'+signed.data.id,'GET',undefined,{Cookie:cookie})).status,200);
@@ -125,7 +132,7 @@ test('MERN booking lifecycle, login requirement, ownership, validation, and slot
     const available=await request('/availability?date='+date);assert.equal(available.status,200);assert.ok(!available.data.slots.includes('09:00'));assert.equal((await request('/availability?date=bad')).status,400);
 
     // The cleaner moves their own job forward one step at a time.
-    const jobs=await request('/cleaner/jobs','GET',undefined,anaCookie);assert.equal(jobs.data.jobs.length,1);assert.equal(jobs.data.jobs[0].customer,'Dwight Demo');assert.equal(jobs.data.jobs[0].userId,undefined);
+    const jobs=await request('/cleaner/jobs','GET',undefined,anaCookie);assert.equal(jobs.data.jobs.length,1);assert.equal(jobs.data.jobs[0].customer,'Dwight Demo');assert.deepEqual(jobs.data.jobs[0].location,{lat:13.623457,lng:123.187654});assert.equal(jobs.data.jobs[0].userId,undefined);
     const otherCleaner=await request('/admin/cleaners','POST',{...cleanerInput,name:'Cara Demo',email:'cara@example.test'},admin);
     const caraLogin=await fetch(base+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'cara@example.test',password:'CleanerPass123!'})});
     const caraCookie={Cookie:caraLogin.headers.get('set-cookie').split(';')[0]};
