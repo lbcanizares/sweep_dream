@@ -27,6 +27,11 @@ const services = [
   {id:'move',minutes:360,...photo('move-in-out','A living room full of moving boxes and bags, ready for a move-in clean'),name:'Move-in / move-out',category:'Home',desc:'Up to 2 bedrooms, living room, kitchen, 1 bathroom · deep sanitation · about 5–6 hrs',hours:'5–6 hours',price:2500,included:['Deep sanitation of every room in a home of up to 2 bedrooms, the living room, kitchen and 1 bathroom','Inside cabinets, closets and appliances','Kitchen and bathroom scrub','Floor mopping and trash removal','Bigger homes: add extra bedrooms or bathrooms (up to 4 bedrooms and 3 bathrooms; larger homes get a custom quote)'],extras:homeExtras(60)}
 ];
 const slots = ['09:00', '11:00', '13:00', '15:00'];
+// Service area: bookings need a map pin inside this box around Naga City, Camarines Sur.
+// The map uses the same centre and bounds (sent in /api/config).
+export const serviceArea = {name:'Naga City', center:[13.6218,123.1948], zoom:14, bounds:[[13.55,123.13],[13.70,123.33]]};
+const inServiceArea = l => !!l && typeof l==='object' && Number.isFinite(l.lat) && Number.isFinite(l.lng)
+  && l.lat>=serviceArea.bounds[0][0] && l.lat<=serviceArea.bounds[1][0] && l.lng>=serviceArea.bounds[0][1] && l.lng<=serviceArea.bounds[1][1];
 // Statuses that hold a time slot: once a cleaner is assigned until the job is done.
 const RESERVED = ['confirmed','on_the_way','in_progress','completed'];
 // The only moves a cleaner may make on their own job, one step at a time.
@@ -60,7 +65,7 @@ export async function createApp(db, adminKey) {
   const publicBooking = b => {const {_id,token,userId,...safe}=b; return safe;};
   const publicCleaner = c => {const {_id,...safe}=c; return safe;};
   // What a cleaner needs for a visit; no account ids, feedback or customer history.
-  const jobView = b => ({id:b.id,date:b.date,time:b.time,status:b.status,service:b.service,serviceId:b.serviceId,size:b.size,extras:b.extras||[],addons:b.addons,room:b.room,notes:b.notes,customer:b.name,contact:b.contact,price:b.price,paymentMethod:b.paymentMethod,completedChecklist:b.completedChecklist||[],completedAt:b.completedAt||null});
+  const jobView = b => ({id:b.id,date:b.date,time:b.time,status:b.status,service:b.service,serviceId:b.serviceId,size:b.size,location:b.location||null,extras:b.extras||[],addons:b.addons,room:b.room,notes:b.notes,customer:b.name,contact:b.contact,price:b.price,paymentMethod:b.paymentMethod,completedChecklist:b.completedChecklist||[],completedAt:b.completedAt||null});
   const historyEntry = (status,by) => ({status,by,at:new Date().toISOString()});
   const assignable = c => c.active && c.screening?.idChecked && c.screening?.backgroundChecked;
   // Cleaner routes: a logged-in cleaner account with an active profile.
@@ -71,7 +76,7 @@ export async function createApp(db, adminKey) {
     if(!req.cleaner?.active)return res.status(403).json({error:'Your cleaner account is inactive. Please contact the Sweep Dreams team.'});
     next();
   }catch(e){next(e)}};
-  app.get('/api/config', (req,res)=>res.json({prices,services,addons:Object.entries(addons).map(([id,a])=>({id,...a})),paymentMethods:payments,slots,checklist,today:dateToday(),demo:process.argv.includes('--demo')}));
+  app.get('/api/config', (req,res)=>res.json({prices,services,addons:Object.entries(addons).map(([id,a])=>({id,...a})),paymentMethods:payments,slots,checklist,serviceArea,today:dateToday(),demo:process.argv.includes('--demo')}));
   app.get('/api/availability', async(req,res,next)=>{try {
  const {date}=req.query;
  if(typeof date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date||date<=dateToday())return res.status(400).json({error:'Choose a valid future date.'});
@@ -80,7 +85,7 @@ export async function createApp(db, adminKey) {
  }catch(e){next(e)}});
   app.post('/api/bookings', requireAuth, async (req,res,next)=> {
     try {
-      const {name,contact,room,size,date,time,notes='',serviceId='basic',addons:chosen=[],extras:extraCounts={},paymentMethod='cash'}=req.body;
+      const {name,contact,room,size,date,time,notes='',serviceId='basic',addons:chosen=[],extras:extraCounts={},location,paymentMethod='cash'}=req.body;
       const service=services.find(s=>s.id===serviceId);
       // Extra areas: {id: count}, only ones this service offers, whole numbers from 0 to its limit.
       const offered=service?.extras||[];
@@ -88,10 +93,11 @@ export async function createApp(db, adminKey) {
       const validDate=typeof date==='string' && /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(Date.parse(date)) && new Date(date).toISOString().slice(0,10)===date && date>dateToday();
       const validAddons=Array.isArray(chosen) && new Set(chosen).size===chosen.length && chosen.every(id=>Object.hasOwn(addons,id));
       if (![name,contact,room].every(v=>typeof v==='string' && v.trim().length>=2 && v.length<=100) || !service || (service.sized && !Object.hasOwn(prices,size)) || !slots.includes(time) || !validDate || typeof notes!=='string' || notes.length>500 || !validAddons || !validExtras || !paymentIds.includes(paymentMethod)) return res.status(400).json({error:'Complete all fields and choose a valid date from tomorrow onward.'});
+      if(!inServiceArea(location)) return res.status(400).json({error:'Drop a pin on the map within Naga City, our service area.'});
       if(await bookings.findOne({date,time,status:{$in:RESERVED}})) return res.status(409).json({error:'This slot is already confirmed. Choose another slot.'});
       const extrasChosen=offered.filter(x=>extraCounts[x.id]>0).map(x=>({id:x.id,label:x.label,count:extraCounts[x.id],price:x.price}));
       const price=(service.sized?prices[size]:service.price)+extrasChosen.reduce((sum,x)=>sum+x.count*x.price,0)+chosen.reduce((sum,id)=>sum+addons[id].price,0);
-      const b={userId:req.user.id,id:randomBytes(5).toString('hex').toUpperCase(),name:name.trim(),contact:contact.trim(),room:room.trim(),size:service.sized?size:null,date,time,notes:notes.trim(),price,service:service.name,serviceId:service.id,extras:extrasChosen,addons:chosen.map(id=>({id,name:addons[id].name,price:addons[id].price})),paymentMethod,status:'pending',cleaner:null,cleanerId:null,completedChecklist:[],statusHistory:[historyEntry('pending','customer')],createdAt:new Date().toISOString()};
+      const b={userId:req.user.id,id:randomBytes(5).toString('hex').toUpperCase(),name:name.trim(),contact:contact.trim(),room:room.trim(),size:service.sized?size:null,date,time,notes:notes.trim(),price,service:service.name,serviceId:service.id,location:{lat:+location.lat.toFixed(6),lng:+location.lng.toFixed(6)},extras:extrasChosen,addons:chosen.map(id=>({id,name:addons[id].name,price:addons[id].price})),paymentMethod,status:'pending',cleaner:null,cleanerId:null,completedChecklist:[],statusHistory:[historyEntry('pending','customer')],createdAt:new Date().toISOString()};
       await bookings.insertOne(b);
       res.status(201).json(publicBooking(b));
     }catch(e){next(e);}

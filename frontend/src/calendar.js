@@ -26,6 +26,7 @@ function details(b,config,site){
   b.addons?.length?'Add-ons: '+b.addons.map(a=>a.name).join(', '):null,
   'Payment: '+pay,
   b.notes?'Your notes: '+b.notes:null,
+  b.location?'Map pin: https://www.google.com/maps/search/?api=1&query='+b.location.lat+','+b.location.lng:null,
   'Check or change this booking: '+site+'#bookings'
  ].filter(Boolean).join('\n');
 }
