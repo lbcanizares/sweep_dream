@@ -1,6 +1,6 @@
 import React,{useState} from 'react';
 import {pesos} from './api.js';
-import {Button,StatusPill,checklistFor,fmtDate,initials,paymentName} from './ui.jsx';
+import {Button,StatusPill,checklistFor,extrasText,fmtDate,initials,paymentName} from './ui.jsx';
 
 // The one next step a cleaner can take on a job, in order.
 const nextStep={confirmed:['on_the_way',"I'm on my way"],on_the_way:['in_progress','Start cleaning'],in_progress:['completed','Mark job complete']};
@@ -19,7 +19,7 @@ function JobCard({job,config,today,busyKey,advance}){
  const toggle=(c,on)=>setChecks(on?[...checks,c]:checks.filter(x=>x!==c));
  return <article className="panel job-card">
   <div className="job-head"><div><strong>{fmtDate(job.date)} · {job.time}</strong>{job.date===today&&<span className="today-tag">Today</span>}</div><StatusPill status={job.status}/></div>
-  <p className="job-service">{job.service}{job.size&&' · '+(job.size==='small'?'Small':'Standard')+' dorm'}{job.addons?.length>0&&' · + '+job.addons.map(a=>a.name).join(', ')}</p>
+  <p className="job-service">{job.service}{job.size&&' · '+(job.size==='small'?'Small':'Standard')+' dorm'}{job.extras?.length>0&&' · '+extrasText(job)}{job.addons?.length>0&&' · + '+job.addons.map(a=>a.name).join(', ')}</p>
   <ol className="job-progress" aria-label="Job progress">{progress.map(([s,l],i)=><li key={s} className={i<=at?'reached':''} aria-current={s===job.status?'step':undefined}>{l}</li>)}</ol>
   <dl className="summary job-summary">
    <div><dt>Location</dt><dd>{job.room}</dd></div>

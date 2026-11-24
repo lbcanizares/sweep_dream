@@ -1,8 +1,15 @@
 import React,{useEffect,useState} from 'react';
 export const servicePrice=(config,s)=>s.sized?config.prices.small:s.price;
+// "from" when the price can grow (room sizes or extra rooms/bathrooms).
+export const fromLabel=s=>s.sized||s.extras?.length?'from ':'';
+const extrasCost=(s,counts)=>(s.extras||[]).reduce((n,x)=>n+(counts?.[x.id]||0)*x.price,0);
+// The extras picked in the booking form, shaped like the ones saved on a booking.
+export const chosenExtras=(s,counts)=>(s?.extras||[]).filter(x=>counts?.[x.id]>0).map(x=>({id:x.id,label:x.label,count:counts[x.id],price:x.price}));
+// e.g. "2 extra rooms, 1 extra bathroom"
+export const extrasText=b=>(b.extras||[]).map(x=>x.count+' '+x.label.toLowerCase()+(x.count>1?'s':'')).join(', ');
 export const pesosFrom=config=>config?.services?Math.min(...config.services.map(s=>servicePrice(config,s))):300;
 // Mirrors the server's calculation for display only; the server recalculates the price it saves.
-export const bookingTotal=(config,form)=>{const s=config.services.find(x=>x.id===form.serviceId);return s?(s.sized?config.prices[form.size]:s.price)+form.addons.reduce((n,id)=>n+(config.addons.find(a=>a.id===id)?.price||0),0):0};
+export const bookingTotal=(config,form)=>{const s=config.services.find(x=>x.id===form.serviceId);return s?(s.sized?config.prices[form.size]:s.price)+extrasCost(s,form.extras)+form.addons.reduce((n,id)=>n+(config.addons.find(a=>a.id===id)?.price||0),0):0};
 // The checklist a cleaner must finish for this service (deep cleans add bathroom and linens).
 export const checklistFor=(config,serviceId)=>config?.services?.find(s=>s.id===serviceId)?.checklist||config?.checklist||[];
 export const paymentName=(config,id)=>config?.paymentMethods.find(p=>p.id===id)?.name||'Cash on service';

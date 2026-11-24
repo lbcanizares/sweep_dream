@@ -183,9 +183,22 @@ test('MERN booking lifecycle, login requirement, ownership, validation, and slot
     const deepDone=await request('/admin/bookings/'+deep.data.id,'PATCH',{status:'completed',completedChecklist:deepChecklist},admin);
     assert.equal(deepDone.status,200);assert.deepEqual(deepDone.data.completedChecklist,deepChecklist);
 
+    // Extra areas are priced by the server: +150 per extra dorm room; +250 per extra room/bathroom elsewhere.
+    const bigDorm=await request('/bookings','POST',{...input,time:'13:00',extras:{room:2},price:1},me);
+    assert.equal(bigDorm.status,201);assert.equal(bigDorm.data.price,800);
+    assert.deepEqual(bigDorm.data.extras,[{id:'room',label:'Extra room',count:2,price:150}]);
+    const bigDeep=await request('/bookings','POST',{...input,serviceId:'dorm_deep',time:'13:00',extras:{room:1,bathroom:1}},me);
+    assert.equal(bigDeep.status,201);assert.equal(bigDeep.data.price,1300);
+    const home=await request('/bookings','POST',{...input,serviceId:'home_regular',time:'11:00',extras:{bedroom:0}},me);
+    assert.equal(home.status,201);assert.equal(home.data.price,1500);assert.deepEqual(home.data.extras,[]);
+    const move=await request('/bookings','POST',{...input,serviceId:'move',time:'11:00',extras:{bedroom:1,bathroom:2},addons:['fridge']},me);
+    assert.equal(move.status,201);assert.equal(move.data.price,2500+250+500+200);
+    for(const extras of [{bathroom:1},{room:4},{room:-1},{room:1.5},{room:'2'},[1]])
+      assert.equal((await request('/bookings','POST',{...input,time:'13:00',extras},me)).status,400,JSON.stringify(extras));
+
     // Cancel the other pending booking.
     assert.equal((await request('/bookings/'+b.data.id+'/cancel','POST',{},me)).status,200);
-    assert.equal((await request('/admin/bookings','GET',undefined,admin)).data.length,4);
+    assert.equal((await request('/admin/bookings','GET',undefined,admin)).data.length,8);
     assert.equal((await client.db('test').collection('bookings').findOne({id})).feedback.rating,5);
   } finally {await new Promise(r=>server.close(r));await client.close();await mongo.stop();}
 });
