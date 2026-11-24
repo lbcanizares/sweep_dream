@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {MongoMemoryServer} from 'mongodb-memory-server';
 import {MongoClient} from 'mongodb';
-import {createApp,checklist} from '../server/app.js';
+import {createApp,checklist,deepChecklist} from '../server/app.js';
 
 test('MERN booking lifecycle, login requirement, ownership, validation, and slot conflicts',async()=>{
   const mongo=await MongoMemoryServer.create();
@@ -33,7 +33,7 @@ test('MERN booking lifecycle, login requirement, ownership, validation, and slot
 
     // Validation (logged in).
     assert.equal((await request('/bookings','POST',{...input,date:'2026-02-30'},{Cookie:cookie})).status,400);
-    assert.equal((await request('/bookings','POST',{...input,size:'mansion'},{Cookie:cookie})).status,400);
+    assert.equal((await request('/bookings','POST',{...input,serviceId:'mansion'},{Cookie:cookie})).status,400);
     // Card payment is listed as coming soon and cannot be chosen yet.
     const card=(await request('/config')).data.paymentMethods.find(p=>p.id==='card');
     assert.equal(card.available,false);
@@ -65,7 +65,7 @@ test('MERN booking lifecycle, login requirement, ownership, validation, and slot
     const storedUser=await client.db('test').collection('users').findOne({email:'dwight@example.test'});assert.notEqual(storedUser.passwordHash,'DemoPassword123!');assert.equal(storedUser.password,undefined);
 
     // Server calculates the price; client-supplied price is ignored.
-    const a=await request('/bookings','POST',{...input,price:1},me);assert.equal(a.status,201);assert.equal(a.data.price,300);assert.equal(a.data.status,'pending');
+    const a=await request('/bookings','POST',{...input,price:1},me);assert.equal(a.status,201);assert.equal(a.data.price,500);assert.equal(a.data.status,'pending');
     const id=a.data.id;
     const b=await request('/bookings','POST',input,me);assert.equal(b.status,201);
 
@@ -175,9 +175,17 @@ test('MERN booking lifecycle, login requirement, ownership, validation, and slot
     assert.equal((await request('/bookings/'+id+'/feedback','POST',{rating:5,comment:'Saved time'},me)).status,200);
     assert.equal((await request('/bookings/'+id+'/feedback','POST',{rating:4},me)).status,409);
 
+    // A dorm deep clean is ₱800 and needs its own checklist (bathroom and linens) to finish.
+    const deep=await request('/bookings','POST',{...input,serviceId:'dorm_deep',time:'15:00',price:1},me);
+    assert.equal(deep.status,201);assert.equal(deep.data.price,800);
+    assert.equal((await request('/admin/bookings/'+deep.data.id,'PATCH',{status:'confirmed',cleanerId:ana.data.id},admin)).status,200);
+    assert.equal((await request('/admin/bookings/'+deep.data.id,'PATCH',{status:'completed',completedChecklist:checklist},admin)).status,400);
+    const deepDone=await request('/admin/bookings/'+deep.data.id,'PATCH',{status:'completed',completedChecklist:deepChecklist},admin);
+    assert.equal(deepDone.status,200);assert.deepEqual(deepDone.data.completedChecklist,deepChecklist);
+
     // Cancel the other pending booking.
     assert.equal((await request('/bookings/'+b.data.id+'/cancel','POST',{},me)).status,200);
-    assert.equal((await request('/admin/bookings','GET',undefined,admin)).data.length,3);
+    assert.equal((await request('/admin/bookings','GET',undefined,admin)).data.length,4);
     assert.equal((await client.db('test').collection('bookings').findOne({id})).feedback.rating,5);
   } finally {await new Promise(r=>server.close(r));await client.close();await mongo.stop();}
 });

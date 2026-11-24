@@ -2,7 +2,9 @@ import express from 'express';
 import {installAuth,hashPassword,validEmail,validPassword} from './auth.js';
 import { randomBytes } from 'node:crypto';
 
-export const checklist = ['Sweep and mop accessible floors', 'Wipe desks and accessible surfaces', 'Empty room trash', 'Tidy common room areas'];
+// Cleaner checklist for a basic clean; services can add their own items (see dorm_deep).
+export const checklist = ['Sweep and mop the room and common area', 'Wipe tables and desks', 'Empty the trash', 'Tidy the common area'];
+export const deepChecklist = [...checklist, 'Clean and disinfect the bathroom (toilet, sink, shower, floor)', 'Make the bed and change the linens'];
 const prices = {small: 300, standard: 450};
 const addons = {laundry:{name:'Laundry fold',price:80}, dishes:{name:'Dishes',price:50}, fridge:{name:'Fridge clean',price:200}};
 const payments = [
@@ -14,8 +16,8 @@ const payments = [
 const paymentIds = payments.filter(p=>p.available).map(p=>p.id);
 // minutes: the longest a visit usually takes, used as the length of calendar reminders.
 const services = [
-  {id:'basic',minutes:60,name:'Basic dorm cleaning',category:'Dorm',desc:'About 1 hour · One-time clean',hours:'about 1 hour',sized:true,included:null},
-  {id:'dorm_deep',minutes:120,name:'Dorm deep clean',category:'Dorm',desc:'1-2 hrs · Single room',hours:'1-2 hours',price:499,included:['Dusting, sweeping, mopping','Bed making and linen change','Trash removal and disinfecting']},
+  {id:'basic',minutes:90,name:'Basic dorm cleaning',category:'Dorm',desc:'1 room + common area · about 1–1.5 hrs',hours:'1–1.5 hours',price:500,included:['Sweeping and mopping (1 room and the common area)','Wiping tables and desks','Emptying the trash']},
+  {id:'dorm_deep',minutes:150,name:'Dorm deep clean',category:'Dorm',desc:'Basic clean + bathroom and linens · about 2–2.5 hrs',hours:'2–2.5 hours',price:800,included:['Everything in Basic dorm cleaning (1 room and the common area)','Bathroom cleaning and disinfecting (your unit’s own bathroom)','Bed making and linen change (using your own clean sheets)'],checklist:deepChecklist},
   {id:'home_regular',minutes:180,name:'Regular home cleaning',category:'Home',desc:'2-3 hrs · Homes and apartments',hours:'2-3 hours',price:699,included:['Dusting, sweeping, mopping','Kitchen and bathroom wipe-down','Trash removal']},
   {id:'move',minutes:240,name:'Move-in / move-out',category:'Home',desc:'3-4 hrs · Deep sanitation',hours:'3-4 hours',price:1299,included:['Deep sanitation of all rooms','Kitchen and bathroom scrub','Floor mopping and trash removal']}
 ];
@@ -27,7 +29,9 @@ const CLEANER_NEXT = {confirmed:'on_the_way', on_the_way:'in_progress', in_progr
 const SERVICE_TYPES = ['Dorm','Home'];
 // A cleaner is responsible for these jobs until they are finished, cancelled or reassigned.
 const ACTIVE_JOBS = ['confirmed','on_the_way','in_progress'];
-const checklistDone = list => Array.isArray(list) && checklist.every(c=>list.includes(c));
+// Each service's cleaner checklist (its own, or the basic one).
+const checklistFor = serviceId => services.find(s=>s.id===serviceId)?.checklist || checklist;
+const checklistDone = (list,serviceId) => Array.isArray(list) && checklistFor(serviceId).every(c=>list.includes(c));
 const optionalText = (v,max) => v===undefined || v==='' || (typeof v==='string' && v.length<=max);
 const validPhotoUrl = v => v===undefined || v==='' || (typeof v==='string' && v.length<=500 && /^https?:\/\/\S+$/.test(v));
 const dateToday = () => new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Manila'});
@@ -106,7 +110,7 @@ export async function createApp(db, adminKey) {
       if(!c||!assignable(c))return res.status(400).json({error:'Choose an active cleaner whose ID and background checks are done.'});
       Object.assign(update,{cleanerId:c.id,cleaner:c.name,cleanerPhotoUrl:c.photoUrl||null});
     }
-    if(status==='completed'){if(!checklistDone(completedChecklist))return res.status(400).json({error:'Complete all cleaning checklist items first.'});update.completedChecklist=checklist;update.completedAt=new Date().toISOString();}
+    if(status==='completed'){if(!checklistDone(completedChecklist,b.serviceId))return res.status(400).json({error:'Complete all cleaning checklist items first.'});update.completedChecklist=checklistFor(b.serviceId);update.completedAt=new Date().toISOString();}
     const r=await bookings.updateOne({id:b.id,status:b.status},{$set:update,$push:{statusHistory:historyEntry(status,'admin')}});if(!r.modifiedCount)return res.status(409).json({error:'Booking changed. Refresh and try again.'});
     res.json(publicBooking(await bookings.findOne({id:b.id})));
   }catch(e){if(e.code===11000)return res.status(409).json({error:'Another booking is confirmed for this slot.'});next(e);}});
@@ -187,7 +191,7 @@ export async function createApp(db, adminKey) {
     const {status,completedChecklist=[]}=req.body||{};
     if(!CLEANER_NEXT[b.status]||CLEANER_NEXT[b.status]!==status)return res.status(409).json({error:'This job has already moved on. Refresh your jobs and try again.'});
     const update={status};
-    if(status==='completed'){if(!checklistDone(completedChecklist))return res.status(400).json({error:'Tick every checklist item before marking the job complete.'});update.completedChecklist=checklist;update.completedAt=new Date().toISOString();}
+    if(status==='completed'){if(!checklistDone(completedChecklist,b.serviceId))return res.status(400).json({error:'Tick every checklist item before marking the job complete.'});update.completedChecklist=checklistFor(b.serviceId);update.completedAt=new Date().toISOString();}
     const r=await bookings.updateOne({id:b.id,cleanerId:req.cleaner.id,status:b.status},{$set:update,$push:{statusHistory:historyEntry(status,'cleaner')}});
     if(!r.modifiedCount)return res.status(409).json({error:'This job has already moved on. Refresh your jobs and try again.'});
     res.json(jobView(await bookings.findOne({id:b.id})));
