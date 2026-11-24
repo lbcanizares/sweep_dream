@@ -3,6 +3,8 @@ export const servicePrice=(config,s)=>s.sized?config.prices.small:s.price;
 export const pesosFrom=config=>config?.services?Math.min(...config.services.map(s=>servicePrice(config,s))):300;
 // Mirrors the server's calculation for display only; the server recalculates the price it saves.
 export const bookingTotal=(config,form)=>{const s=config.services.find(x=>x.id===form.serviceId);return s?(s.sized?config.prices[form.size]:s.price)+form.addons.reduce((n,id)=>n+(config.addons.find(a=>a.id===id)?.price||0),0):0};
+// The checklist a cleaner must finish for this service (deep cleans add bathroom and linens).
+export const checklistFor=(config,serviceId)=>config?.services?.find(s=>s.id===serviceId)?.checklist||config?.checklist||[];
 export const paymentName=(config,id)=>config?.paymentMethods.find(p=>p.id===id)?.name||'Cash on service';
 export const fmtDate=d=>new Date(d+'T12:00:00').toLocaleDateString('en-PH',{weekday:'short',day:'numeric',month:'short'});
 export const initials=name=>(name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();

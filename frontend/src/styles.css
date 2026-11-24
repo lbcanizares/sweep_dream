@@ -298,6 +298,9 @@ legend{font-size:14px;font-weight:600;padding:0 6px}
 .booking-timeline strong{display:block;font-weight:500}.booking-timeline small{color:var(--muted);font-size:13px}
 .cleaner-card{display:flex;align-items:center;gap:12px;margin:12px 0;padding:16px;border-radius:14px;background:var(--navy);color:#fff}
 .cleaner-card .avatar{background:#fff;color:var(--navy)}
+.calendar-add{display:flex;align-items:center;justify-content:space-between;gap:12px 16px;flex-wrap:wrap;margin:12px 0;padding:16px;border:1px solid var(--border);border-radius:14px;background:var(--surface)}
+.calendar-add strong,.calendar-add small{display:block}.calendar-add small{color:var(--muted);font-size:13px}
+.calendar-buttons{display:flex;gap:8px;flex-wrap:wrap}
 .cleaner-card strong,.cleaner-card small{display:block}.cleaner-card small{color:#C9D4EE;font-size:13px}
 details{margin:12px 0;font-size:14px}summary{cursor:pointer;color:var(--navy);font-weight:600}
 code{display:block;margin-top:8px;padding:12px;border-radius:10px;background:var(--navy-wash);font-size:13px;overflow-wrap:anywhere}
@@ -397,6 +400,7 @@ label .fine{display:block;margin-top:6px;font-weight:400}
  .steps{gap:10px}.steps li{font-size:13px;gap:6px}.steps li:not(.current){font-size:0;gap:0}
  .summary{grid-template-columns:minmax(0,1fr);padding:16px}
  .booking-timeline{grid-template-columns:minmax(0,1fr)}
+ .calendar-buttons,.calendar-buttons .secondary{flex:1}
  .actions .primary,.actions .secondary{flex:1}
  .auth-layout{grid-template-columns:minmax(0,1fr);margin:0 auto;max-width:460px}.auth-intro{display:none}
  .cleaner-profile{flex-wrap:wrap;padding:16px}

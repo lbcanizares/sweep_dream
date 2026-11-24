@@ -32,7 +32,7 @@ Your MongoDB service must be running. Keep `.env` private. `npm run dev` serves 
 
 ## Demonstrate in 3-5 minutes
 
-1. Click **Get Started**, then open the Basic dorm cleaning card and click **Book Now**. Choose Small dorm (PHP 300), then Continue. The bottom navigation also opens **Book a clean** directly.
+1. Click **Get Started**, then open the Basic dorm cleaning card and click **Book Now**. It is PHP 500 for 1 room and the common area; click Continue. The bottom navigation also opens **Book a clean** directly.
 2. Choose a date from tomorrow onward and 09:00 (Philippines time). Enter Dwight Demo, demo@example.test, and Campus Pilot Dorm Room 204. Continue.
 3. Review the final price and request the clean. Show the Pending reference and save the private access token.
 4. Open **Admin**, enter the classroom key, type Demo Cleaner for that request, then Confirm & assign. Explain that screening is manual and this name is fictional.
@@ -45,7 +45,7 @@ The browser remembers the most recent reference/token in localStorage. To find a
 
 ## Implemented scope
 
-- Three-step basic dorm cleaning request, two proposed room sizes, upfront PHP 300/450 prices.
+- Three-step booking request with upfront prices: basic dorm cleaning PHP 500 (1 room + common area) and dorm deep clean PHP 800 (adds bathroom cleaning and a linen change).
 - Server-side pricing and input/date validation, MongoDB storage, reference and private-token tracking.
 - Admin key protection, manual cleaner assignment and confirmation.
 - One confirmed booking per date/time slot, enforced by MongoDB's unique partial index.
@@ -53,7 +53,7 @@ The browser remembers the most recent reference/token in localStorage. To find a
 - One 1-5 rating and optional comment after completion, visible to admin.
 - Mobile layout, loading states, error messages.
 
-Prototype assumptions: small room <=15 m² at PHP 300; standard room 16-25 m² at PHP 450; approximately one hour; 09:00/11:00/13:00/15:00 slots; one pilot cleaner per slot; cash after service. The proposal specifies a starting price of PHP 300 but not these size tiers or schedules. No automatic notifications are sent. The team contacts customers manually.
+Prototype assumptions: basic dorm cleaning covers 1 room and the common area at PHP 500 (about 1-1.5 hours); the deep clean adds the unit's own bathroom and a linen change with the customer's sheets at PHP 800 (about 2-2.5 hours); 09:00/11:00/13:00/15:00 slots; one pilot cleaner per slot; cash after service. The proposal's original starting price was PHP 300; the team revised dorm pricing to cover the room plus the common area. No automatic notifications are sent. The team contacts customers manually.
 
 ## Validation
 

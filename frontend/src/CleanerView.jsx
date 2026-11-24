@@ -1,6 +1,6 @@
 import React,{useState} from 'react';
 import {pesos} from './api.js';
-import {Button,StatusPill,fmtDate,initials,paymentName} from './ui.jsx';
+import {Button,StatusPill,checklistFor,fmtDate,initials,paymentName} from './ui.jsx';
 
 // The one next step a cleaner can take on a job, in order.
 const nextStep={confirmed:['on_the_way',"I'm on my way"],on_the_way:['in_progress','Start cleaning'],in_progress:['completed','Mark job complete']};
@@ -14,7 +14,7 @@ function CleanerAvatar({cleaner,size=''}){
 function JobCard({job,config,today,busyKey,advance}){
  const [checks,setChecks]=useState([]);
  const [status,label]=nextStep[job.status]||[];
- const needsChecklist=status==='completed',allChecked=config.checklist.every(c=>checks.includes(c));
+ const items=checklistFor(config,job.serviceId),needsChecklist=status==='completed',allChecked=items.every(c=>checks.includes(c));
  const at=progress.findIndex(([s])=>s===job.status);
  const toggle=(c,on)=>setChecks(on?[...checks,c]:checks.filter(x=>x!==c));
  return <article className="panel job-card">
@@ -27,8 +27,8 @@ function JobCard({job,config,today,busyKey,advance}){
    <div><dt>Payment</dt><dd>{job.paymentMethod==='cash'?'Collect '+pesos(job.price)+' in cash':paymentName(config,job.paymentMethod)+' · arranged by the team'}</dd></div>
    {job.notes&&<div className="wide"><dt>Customer notes</dt><dd>{job.notes}</dd></div>}
   </dl>
-  {needsChecklist&&<fieldset><legend>Before you finish, tick every item</legend>{config.checklist.map(c=><label className="check" key={c}><input type="checkbox" checked={checks.includes(c)} onChange={e=>toggle(c,e.target.checked)}/>{c}</label>)}</fieldset>}
-  {status&&<div className="actions start"><Button busy={busyKey===job.id+status} disabled={!!busyKey||(needsChecklist&&!allChecked)} onClick={()=>advance(job,status,needsChecklist?checks:undefined)}>{label}</Button>{needsChecklist&&!allChecked&&<span className="fine">Tick all {config.checklist.length} items to finish.</span>}</div>}
+  {needsChecklist&&<fieldset><legend>Before you finish, tick every item</legend>{items.map(c=><label className="check" key={c}><input type="checkbox" checked={checks.includes(c)} onChange={e=>toggle(c,e.target.checked)}/>{c}</label>)}</fieldset>}
+  {status&&<div className="actions start"><Button busy={busyKey===job.id+status} disabled={!!busyKey||(needsChecklist&&!allChecked)} onClick={()=>advance(job,status,needsChecklist?checks:undefined)}>{label}</Button>{needsChecklist&&!allChecked&&<span className="fine">Tick all {items.length} items to finish.</span>}</div>}
  </article>;
 }
 
