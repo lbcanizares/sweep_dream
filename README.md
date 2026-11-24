@@ -45,7 +45,7 @@ The browser remembers the most recent reference/token in localStorage. To find a
 
 ## Implemented scope
 
-- Three-step booking request with upfront prices: basic dorm cleaning PHP 500 (1 room + common area) and dorm deep clean PHP 800 (adds bathroom cleaning and a linen change).
+- Three-step booking request with upfront prices: basic dorm cleaning PHP 500 (1 room + common area, +PHP 150 per extra room), dorm deep clean PHP 800 (adds bathroom cleaning and a linen change, +PHP 250 per extra room or bathroom), regular home cleaning PHP 1,500 and move-in/move-out PHP 2,500 (up to 2 bedrooms, living room, kitchen, 1 bathroom, +PHP 250 per extra bedroom or bathroom).
 - Server-side pricing and input/date validation, MongoDB storage, reference and private-token tracking.
 - Admin key protection, manual cleaner assignment and confirmation.
 - One confirmed booking per date/time slot, enforced by MongoDB's unique partial index.

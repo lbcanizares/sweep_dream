@@ -28,7 +28,7 @@ function App(){
   const [busyKey,setBusyKey]=useState(''),[navigating,setNavigating]=useState(true);
   const [user,setUser]=useState(null),[authReady,setAuthReady]=useState(false),[accountBookings,setAccountBookings]=useState(null);
   const [availability,setAvailability]=useState(null),[search,setSearch]=useState('');
-  const [step,setStep]=useState(1),[form,setForm]=useState({serviceId:'basic',size:'small',addons:[],paymentMethod:'cash',date:'',time:'09:00',name:'',contact:'',room:'',notes:''});
+  const [step,setStep]=useState(1),[form,setForm]=useState({serviceId:'basic',size:'small',addons:[],extras:{},paymentMethod:'cash',date:'',time:'09:00',name:'',contact:'',room:'',notes:''});
   const [booking,setBooking]=useState(null);
   const [adminKey,setAdminKey]=useState(''),[rows,setRows]=useState([]),[staffCleaners,setStaffCleaners]=useState([]);
   const [cleanerData,setCleanerData]=useState(null);
@@ -61,7 +61,7 @@ function App(){
     Promise.all(jobs).then(()=>live&&setNavigating(false));return()=>{live=false}},[tab,user,authReady]);
   useEffect(()=>{if(!form.date){setAvailability(null);return}let current=true;setAvailability(null);api('/availability?date='+form.date).then(data=>{if(current)setAvailability(data)}).catch(e=>{if(current)setError(e.message)});return()=>{current=false}},[form.date,tab]);
 
-  const submit=()=>run(async()=>{const b=await api('/bookings',{method:'POST',body:JSON.stringify(form)});setBooking(b);setAccountBookings(null);setStep(1);setForm(f=>({...f,addons:[],date:'',notes:''}));show('bookings');setMessage('Request saved. Your schedule is pending manual confirmation.');},'book');
+  const submit=()=>run(async()=>{const b=await api('/bookings',{method:'POST',body:JSON.stringify(form)});setBooking(b);setAccountBookings(null);setStep(1);setForm(f=>({...f,addons:[],extras:{},date:'',notes:''}));show('bookings');setMessage('Request saved. Your schedule is pending manual confirmation.');},'book');
   const logout=()=>run(async()=>{await api('/auth/logout',{method:'POST'});setUser(null);setAccountBookings(null);setBooking(null);setCleanerData(null);go('home')},'logout');
   const onAuth=u=>{setUser(u);setForm({...form,name:u.name,contact:u.email});setBooking(null);setAccountBookings(null);setCleanerData(null);let next=homeFor(u);try{const saved=sessionStorage.getItem('after-login');sessionStorage.removeItem('after-login');if(saved&&(saved==='cleaner')===isCleaner(u))next=saved}catch{}go(next)};
   const openBooking=b=>{go('bookings');load(b.id)};

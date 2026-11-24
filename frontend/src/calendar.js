@@ -3,7 +3,8 @@
 const TZ='Asia/Manila',OFFSET_MS=8*3600e3;
 const pad=n=>String(n).padStart(2,'0');
 
-const minutesFor=(b,config)=>config?.services?.find(s=>s.id===b.serviceId)?.minutes||60;
+// Visit length: the service's usual time plus time for any extra rooms/bathrooms.
+const minutesFor=(b,config)=>{const s=config?.services?.find(x=>x.id===b.serviceId);return (s?.minutes||60)+(b.extras||[]).reduce((n,x)=>n+x.count*(s?.extras?.find(e=>e.id===x.id)?.minutes||0),0);};
 
 // Start and end as real instants, from the booking's Manila date and time.
 function span(b,config){
@@ -21,6 +22,7 @@ function details(b,config,site){
   'Booking #'+b.id,
   b.status==='pending'?'This is your requested time. The Sweep Dreams team will confirm it.':null,
   b.cleaner?'Cleaner: '+b.cleaner:null,
+  b.extras?.length?'Extra areas: '+b.extras.map(x=>x.count+' '+x.label.toLowerCase()+(x.count>1?'s':'')).join(', '):null,
   b.addons?.length?'Add-ons: '+b.addons.map(a=>a.name).join(', '):null,
   'Payment: '+pay,
   b.notes?'Your notes: '+b.notes:null,

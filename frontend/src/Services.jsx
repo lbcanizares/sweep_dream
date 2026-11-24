@@ -1,7 +1,7 @@
 import React,{useEffect,useLayoutEffect,useRef,useState} from 'react';
 import NavIcon from './NavIcon.jsx';
 import {pesos} from './api.js';
-import {pesosFrom,servicePrice} from './ui.jsx';
+import {fromLabel,pesosFrom,servicePrice} from './ui.jsx';
 
 // Services, prices and categories come from GET /api/config; the server recalculates every price.
 const icons={Dorm:'window',Home:'house'};
@@ -26,7 +26,7 @@ export function ServiceCatalog({config,choose,search='',setSearch,title='Service
   <div className={'service-list'+(fading?' is-fading':'')} aria-live="polite">{list.map(s=><button key={s.id} type="button" className="service-card" onClick={()=>choose(s.id)}>
    <span className="service-icon" aria-hidden="true"><NavIcon name={icons[s.category]||'window'} size={24} stroke={1.6}/></span>
    <span className="service-copy"><strong>{s.name}</strong><small>{s.desc}</small></span>
-   <span className="service-price">{s.sized&&<small>from</small>}{pesos(servicePrice(config,s))}</span>
+   <span className="service-price">{fromLabel(s)&&<small>from</small>}{pesos(servicePrice(config,s))}</span>
    <span className="service-arrow" aria-hidden="true"><NavIcon name="arrow" size={20}/></span>
   </button>)}
   {!list.length&&<div className="empty-row"><p>No services match “{search.trim()}”{shown!=='All'&&' in '+shown}.</p>{setSearch&&q&&<button type="button" className="text-link" onClick={()=>setSearch('')}>Clear search</button>}</div>}</div>

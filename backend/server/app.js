@@ -15,11 +15,14 @@ const payments = [
 // Only methods marked available can be chosen for a new booking.
 const paymentIds = payments.filter(p=>p.available).map(p=>p.id);
 // minutes: the longest a visit usually takes, used as the length of calendar reminders.
+// extras: optional extra areas the customer can add, each with a price, a limit and extra minutes.
+const extra = (id,label,price,max,minutes) => ({id,label,price,max,minutes});
+const homeExtras = minutes => [extra('bedroom','Extra bedroom',250,2,minutes),extra('bathroom','Extra bathroom',250,2,30)];
 const services = [
-  {id:'basic',minutes:90,name:'Basic dorm cleaning',category:'Dorm',desc:'1 room + common area · about 1–1.5 hrs',hours:'1–1.5 hours',price:500,included:['Sweeping and mopping (1 room and the common area)','Wiping tables and desks','Emptying the trash']},
-  {id:'dorm_deep',minutes:150,name:'Dorm deep clean',category:'Dorm',desc:'Basic clean + bathroom and linens · about 2–2.5 hrs',hours:'2–2.5 hours',price:800,included:['Everything in Basic dorm cleaning (1 room and the common area)','Bathroom cleaning and disinfecting (your unit’s own bathroom)','Bed making and linen change (using your own clean sheets)'],checklist:deepChecklist},
-  {id:'home_regular',minutes:180,name:'Regular home cleaning',category:'Home',desc:'2-3 hrs · Homes and apartments',hours:'2-3 hours',price:699,included:['Dusting, sweeping, mopping','Kitchen and bathroom wipe-down','Trash removal']},
-  {id:'move',minutes:240,name:'Move-in / move-out',category:'Home',desc:'3-4 hrs · Deep sanitation',hours:'3-4 hours',price:1299,included:['Deep sanitation of all rooms','Kitchen and bathroom scrub','Floor mopping and trash removal']}
+  {id:'basic',minutes:90,name:'Basic dorm cleaning',category:'Dorm',desc:'1 room + common area · about 1–1.5 hrs',hours:'1–1.5 hours',price:500,included:['Sweeping and mopping (1 room and the common area)','Wiping tables and desks','Emptying the trash'],extras:[extra('room','Extra room',150,3,30)]},
+  {id:'dorm_deep',minutes:150,name:'Dorm deep clean',category:'Dorm',desc:'Basic clean + bathroom and linens · about 2–2.5 hrs',hours:'2–2.5 hours',price:800,included:['Everything in Basic dorm cleaning (1 room and the common area)','Bathroom cleaning and disinfecting (your unit’s own bathroom)','Bed making and linen change (using your own clean sheets)'],checklist:deepChecklist,extras:[extra('room','Extra room',250,3,45),extra('bathroom','Extra bathroom',250,2,30)]},
+  {id:'home_regular',minutes:240,name:'Regular home cleaning',category:'Home',desc:'Up to 2 bedrooms, living room, kitchen, 1 bathroom · about 3.5–4 hrs',hours:'3.5–4 hours',price:1500,included:['Up to 2 bedrooms, the living room and kitchen: sweeping, mopping, dusting and wiping surfaces','1 bathroom: toilet, sink and shower wipe-down','Emptying the trash','Bigger homes: add extra bedrooms or bathrooms (up to 4 bedrooms and 3 bathrooms; larger homes get a custom quote)'],extras:homeExtras(45)},
+  {id:'move',minutes:360,name:'Move-in / move-out',category:'Home',desc:'Up to 2 bedrooms, living room, kitchen, 1 bathroom · deep sanitation · about 5–6 hrs',hours:'5–6 hours',price:2500,included:['Deep sanitation of every room in a home of up to 2 bedrooms, the living room, kitchen and 1 bathroom','Inside cabinets, closets and appliances','Kitchen and bathroom scrub','Floor mopping and trash removal','Bigger homes: add extra bedrooms or bathrooms (up to 4 bedrooms and 3 bathrooms; larger homes get a custom quote)'],extras:homeExtras(60)}
 ];
 const slots = ['09:00', '11:00', '13:00', '15:00'];
 // Statuses that hold a time slot: once a cleaner is assigned until the job is done.
@@ -55,7 +58,7 @@ export async function createApp(db, adminKey) {
   const publicBooking = b => {const {_id,token,userId,...safe}=b; return safe;};
   const publicCleaner = c => {const {_id,...safe}=c; return safe;};
   // What a cleaner needs for a visit; no account ids, feedback or customer history.
-  const jobView = b => ({id:b.id,date:b.date,time:b.time,status:b.status,service:b.service,serviceId:b.serviceId,size:b.size,addons:b.addons,room:b.room,notes:b.notes,customer:b.name,contact:b.contact,price:b.price,paymentMethod:b.paymentMethod,completedChecklist:b.completedChecklist||[],completedAt:b.completedAt||null});
+  const jobView = b => ({id:b.id,date:b.date,time:b.time,status:b.status,service:b.service,serviceId:b.serviceId,size:b.size,extras:b.extras||[],addons:b.addons,room:b.room,notes:b.notes,customer:b.name,contact:b.contact,price:b.price,paymentMethod:b.paymentMethod,completedChecklist:b.completedChecklist||[],completedAt:b.completedAt||null});
   const historyEntry = (status,by) => ({status,by,at:new Date().toISOString()});
   const assignable = c => c.active && c.screening?.idChecked && c.screening?.backgroundChecked;
   // Cleaner routes: a logged-in cleaner account with an active profile.
@@ -75,14 +78,18 @@ export async function createApp(db, adminKey) {
  }catch(e){next(e)}});
   app.post('/api/bookings', requireAuth, async (req,res,next)=> {
     try {
-      const {name,contact,room,size,date,time,notes='',serviceId='basic',addons:chosen=[],paymentMethod='cash'}=req.body;
+      const {name,contact,room,size,date,time,notes='',serviceId='basic',addons:chosen=[],extras:extraCounts={},paymentMethod='cash'}=req.body;
       const service=services.find(s=>s.id===serviceId);
+      // Extra areas: {id: count}, only ones this service offers, whole numbers from 0 to its limit.
+      const offered=service?.extras||[];
+      const validExtras=extraCounts&&typeof extraCounts==='object'&&!Array.isArray(extraCounts)&&Object.entries(extraCounts).every(([id,n])=>{const x=offered.find(e=>e.id===id);return x&&Number.isInteger(n)&&n>=0&&n<=x.max;});
       const validDate=typeof date==='string' && /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(Date.parse(date)) && new Date(date).toISOString().slice(0,10)===date && date>dateToday();
       const validAddons=Array.isArray(chosen) && new Set(chosen).size===chosen.length && chosen.every(id=>Object.hasOwn(addons,id));
-      if (![name,contact,room].every(v=>typeof v==='string' && v.trim().length>=2 && v.length<=100) || !service || (service.sized && !Object.hasOwn(prices,size)) || !slots.includes(time) || !validDate || typeof notes!=='string' || notes.length>500 || !validAddons || !paymentIds.includes(paymentMethod)) return res.status(400).json({error:'Complete all fields and choose a valid date from tomorrow onward.'});
+      if (![name,contact,room].every(v=>typeof v==='string' && v.trim().length>=2 && v.length<=100) || !service || (service.sized && !Object.hasOwn(prices,size)) || !slots.includes(time) || !validDate || typeof notes!=='string' || notes.length>500 || !validAddons || !validExtras || !paymentIds.includes(paymentMethod)) return res.status(400).json({error:'Complete all fields and choose a valid date from tomorrow onward.'});
       if(await bookings.findOne({date,time,status:{$in:RESERVED}})) return res.status(409).json({error:'This slot is already confirmed. Choose another slot.'});
-      const price=(service.sized?prices[size]:service.price)+chosen.reduce((sum,id)=>sum+addons[id].price,0);
-      const b={userId:req.user.id,id:randomBytes(5).toString('hex').toUpperCase(),name:name.trim(),contact:contact.trim(),room:room.trim(),size:service.sized?size:null,date,time,notes:notes.trim(),price,service:service.name,serviceId:service.id,addons:chosen.map(id=>({id,name:addons[id].name,price:addons[id].price})),paymentMethod,status:'pending',cleaner:null,cleanerId:null,completedChecklist:[],statusHistory:[historyEntry('pending','customer')],createdAt:new Date().toISOString()};
+      const extrasChosen=offered.filter(x=>extraCounts[x.id]>0).map(x=>({id:x.id,label:x.label,count:extraCounts[x.id],price:x.price}));
+      const price=(service.sized?prices[size]:service.price)+extrasChosen.reduce((sum,x)=>sum+x.count*x.price,0)+chosen.reduce((sum,id)=>sum+addons[id].price,0);
+      const b={userId:req.user.id,id:randomBytes(5).toString('hex').toUpperCase(),name:name.trim(),contact:contact.trim(),room:room.trim(),size:service.sized?size:null,date,time,notes:notes.trim(),price,service:service.name,serviceId:service.id,extras:extrasChosen,addons:chosen.map(id=>({id,name:addons[id].name,price:addons[id].price})),paymentMethod,status:'pending',cleaner:null,cleanerId:null,completedChecklist:[],statusHistory:[historyEntry('pending','customer')],createdAt:new Date().toISOString()};
       await bookings.insertOne(b);
       res.status(201).json(publicBooking(b));
     }catch(e){next(e);}
